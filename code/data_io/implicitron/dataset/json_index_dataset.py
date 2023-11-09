@@ -33,16 +33,16 @@ from typing import (
 import numpy as np
 import torch
 from PIL import Image
-from .implicitron.tools.config import registry, ReplaceableBase
+from ..tools.config import registry, ReplaceableBase
 from pytorch3d.io import IO
 from pytorch3d.renderer.camera_utils import join_cameras_as_batch
 from pytorch3d.renderer.cameras import CamerasBase, PerspectiveCameras
 from pytorch3d.structures.pointclouds import Pointclouds
 from tqdm import tqdm
 
-from .implicitron.dataset import types
-from .implicitron.dataset.dataset_base import DatasetBase, FrameData
-from .implicitron.dataset.utils import is_known_frame_scalar
+from . import types
+from .dataset_base import DatasetBase, FrameData
+from .utils import is_known_frame_scalar
 
 
 logger = logging.getLogger(__name__)
