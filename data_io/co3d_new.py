@@ -604,6 +604,8 @@ if __name__ == '__main__':
     parser.add_argument("--dataset_root", type=str, required=True)
     args = parser.parse_args()
 
+    torch.multiprocessing.set_sharing_strategy('file_system')
+    
     if args.all_classes:
         categories = ["apple", "ball",  "bench",  "cake",  "donut",  "hydrant", "plant", "suitcase", "teddybear", "vase"]
     else:
