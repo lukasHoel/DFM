@@ -544,6 +544,10 @@ def compute_camera_quality_score(categories, dataset_root):
 
     # store camera quality score for each class indivudally to perform per class  top-k filtering later 
     for category in categories:
+        if os.path.exists(f'dataset_cache_new/camera_quality_dict_{category}.pt'):
+            print("skip", category, "already exists", f'dataset_cache_new/camera_quality_dict_{category}.pt')
+            continue
+
         train_dataset = CO3DCamera(
             root=dataset_root,
             num_context=1,
