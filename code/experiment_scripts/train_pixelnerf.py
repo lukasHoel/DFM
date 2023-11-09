@@ -89,6 +89,7 @@ def train(cfg: DictConfig):
         checkpoint_path=cfg.checkpoint_path,
         wandb_config=None,
         run_name=cfg.name,
+        output_dir=cfg.output_dir
     )
 
     trainer.train()

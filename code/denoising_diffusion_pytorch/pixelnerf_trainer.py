@@ -1,6 +1,6 @@
 # adapted from https://github.com/lucidrains/denoising-diffusion-pytorch
 
-from pathlib import Path
+import os
 from collections import namedtuple
 from collections import OrderedDict
 
@@ -14,13 +14,16 @@ from torchvision.utils import make_grid
 
 from ..denoising_diffusion_pytorch.version import __version__
 
-import wandb
 import imageio
 from accelerate import DistributedDataParallelKwargs
 
 from ..layers import *
 from ..losses import *
 import lpips
+
+from PIL import Image
+
+from ..data_io.io_utils import pmgr
 
 # constants
 ModelPrediction = namedtuple("ModelPrediction", ["pred_noise", "pred_x_start"])
@@ -144,6 +147,7 @@ class Trainer(object):
         checkpoint_path=None,
         wandb_config=None,
         run_name="pixelnerf",
+        output_dir=None,
     ):
         super().__init__()
 
@@ -210,15 +214,8 @@ class Trainer(object):
             # self.load_from_external_checkpoint(checkpoint_path)
 
         if self.accelerator.is_main_process:
-            run = wandb.init(**wandb_config)
-            wandb.run.log_code(".")
-            wandb.run.name = run_name
-            print(f"run dir: {run.dir}")
-            run_dir = run.dir
-            wandb.save(os.path.join(run_dir, "checkpoint*"))
-            wandb.save(os.path.join(run_dir, "video*"))
-            self.results_folder = Path(run_dir)
-            self.results_folder.mkdir(exist_ok=True)
+            self.results_folder = output_dir
+            pmgr.mkdirs(output_dir)
 
     def save(self, milestone):
         if not self.accelerator.is_local_main_process:
@@ -235,17 +232,18 @@ class Trainer(object):
             "version": __version__,
         }
 
-        torch.save(data, str(self.results_folder / f"model-{milestone}.pt"))
+        with pmgr.open(os.path.join(self.results_folder, f"model-{milestone}.pt"), "wb") as f:
+            torch.save(data, f)
 
     def load(self, path):
         accelerator = self.accelerator
         device = accelerator.device
 
-        data = torch.load(
-            # str(self.results_folder / f"model-{milestone}.pt"), map_location=device
-            str(path),
-            map_location=device,
-        )
+        with pmgr.open(str(path), "rb") as f:
+            data = torch.load(
+                f,
+                map_location=device,
+            )
 
         model = self.accelerator.unwrap_model(self.model)
         # print(f"model parameter names: {list(model.state_dict().keys())}")
@@ -268,7 +266,8 @@ class Trainer(object):
 
         model = self.accelerator.unwrap_model(self.model)
         # print(f"model parameter names: {list(model.state_dict().keys())}")
-        data = torch.load(path, map_location=device)
+        with pmgr.open(str(path), "rb") as f:
+            data = torch.load(f, map_location=device)
 
         new_state_dict = OrderedDict()
         for key, value in data["model_state_dict"].items():
@@ -299,7 +298,8 @@ class Trainer(object):
         accelerator = self.accelerator
         device = accelerator.device
         model = self.accelerator.unwrap_model(self.model)
-        data = torch.load(path, map_location=device)
+        with pmgr.open(str(path), "rb") as f:
+            data = torch.load(f, map_location=device)
         new_state_dict = OrderedDict()
         for key, value in data["state_dict"].items():
             if "encoder" in key:
@@ -363,18 +363,18 @@ class Trainer(object):
 
                     self.accelerator.backward(loss)
 
-                if accelerator.is_main_process:
-                    wandb.log(
-                        {
-                            "loss": total_loss,
-                            "rgb_loss": total_rgb_loss,
-                            "dist_loss": total_dist_loss,
-                            "lpips_loss": total_lpips_loss,
-                            "lr": self.lr_scheduler.get_last_lr()[0],
-                            "dist_weight": dist_weight,
-                        },
-                        step=self.step,
-                    )
+                # if accelerator.is_main_process:
+                #     wandb.log(
+                #         {
+                #             "loss": total_loss,
+                #             "rgb_loss": total_rgb_loss,
+                #             "dist_loss": total_dist_loss,
+                #             "lpips_loss": total_lpips_loss,
+                #             "lr": self.lr_scheduler.get_last_lr()[0],
+                #             "dist_weight": dist_weight,
+                #         },
+                #         step=self.step,
+                #     )
 
                 accelerator.clip_grad_norm_(self.model.parameters(), 1.0)
                 pbar.set_description(f"loss: {total_loss:.4f}")
@@ -393,7 +393,7 @@ class Trainer(object):
                     self.ema.update()
 
                     if self.step % self.wandb_every == 0:
-                        self.wandb_summary(misc)
+                        self.wandb_summary(misc, output_dir=self.results_folder)
 
                     if self.step != 0 and self.step % self.save_every == 0:
                         milestone = self.step // self.save_every
@@ -405,22 +405,9 @@ class Trainer(object):
 
         accelerator.print("training complete")
 
-    def wandb_summary(self, misc):
-        print("wandb summary")
+    def wandb_summary(self, misc, output_dir):
+        print("log summary")
         (sampled_output, t_gt, ctxt_rgb, t, depth, output, frames,) = misc
-
-        log_dict = {
-            "sanity/gt_min": t_gt.min(),
-            "sanity/gt_max": t_gt.max(),
-            "sanity/rendered_min": output.min(),
-            "sanity/rendered_max": output.max(),
-            "sanity/sampled_rendered_min": sampled_output.min(),
-            "sanity/sampled_rendered_max": sampled_output.max(),
-            "sanity/ctxt_rgb_min": ctxt_rgb.min(),
-            "sanity/ctxt_rgb_max": ctxt_rgb.max(),
-            "sanity/depth_min": depth.min(),
-            "sanity/depth_max": depth.max(),
-        }
 
         t_gt = rearrange(t_gt, "b t c h w -> (b t) c h w")
         ctxt_rgb = rearrange(ctxt_rgb, "b t c h w -> (b t) c h w")
@@ -429,28 +416,18 @@ class Trainer(object):
             jet_depth(depth.cpu().detach().view(-1, h, w))
         ).permute(0, 3, 1, 2)
         depths = make_grid(depth)
-        depths = wandb.Image(depths.permute(1, 2, 0).numpy())
+        depths = depths.permute(1, 2, 0).numpy()
 
         image_dict = {
-            "visualization/depth": depths,
-            "visualization/output": wandb.Image(
-                make_grid(output.cpu().detach()).permute(1, 2, 0).numpy()
-            ),
-            "visualization/target": wandb.Image(
-                make_grid(t_gt.cpu().detach()).permute(1, 2, 0).numpy()
-            ),
-            "visualization/ctxt_rgb": wandb.Image(
-                make_grid(ctxt_rgb.cpu().detach()).permute(1, 2, 0).numpy()
-            ),
+            "visualization_depth.png": depths,
+            "visualization_output.png":
+                make_grid(output.cpu().detach()).permute(1, 2, 0).numpy(),
+            "visualization_target.png":
+                make_grid(t_gt.cpu().detach()).permute(1, 2, 0).numpy(),
+            "visualization_ctxt_rgb.png":
+                make_grid(ctxt_rgb.cpu().detach()).permute(1, 2, 0).numpy(),
         }
 
-        wandb.log(log_dict)
-        wandb.log(image_dict)
-
-        run_dir = wandb.run.dir
-        denoised_f = os.path.join(run_dir, "denoised_view_circle.mp4")
-        imageio.mimwrite(denoised_f, frames, fps=8, quality=7)
-
-        wandb.log(
-            {"vid/rendered_view_circle": wandb.Video(denoised_f, format="mp4", fps=8),}
-        )
+        for image_key, image in image_dict.items():
+            with pmgr.open(os.path.join(output_dir, image_key), "wb") as f:
+                Image.fromarray(image).save(f)
