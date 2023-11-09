@@ -28,7 +28,7 @@ ModelPrediction = namedtuple("ModelPrediction", ["pred_noise", "pred_x_start"])
 
 class PixelNeRFModelWrapper(nn.Module):
     def __init__(
-        self, model, image_size, loss_type="l1", auto_normalize=True,
+        self, model, image_size, loss_type="l1", auto_normalize=True, lpips_model_path = None
     ):
         super().__init__()
         # assert not model.random_or_learned_sinusoidal_cond
@@ -46,7 +46,7 @@ class PixelNeRFModelWrapper(nn.Module):
         # auto-normalization of data [0, 1] -> [-1, 1] - can turn off by setting it to be False
         self.normalize = normalize_to_neg_one_to_one if auto_normalize else identity
         self.unnormalize = unnormalize_to_zero_to_one if auto_normalize else identity
-        self.perceptual_loss = lpips.LPIPS(net="vgg")
+        self.perceptual_loss = lpips.LPIPS(net="vgg", model_path=lpips_model_path)
 
     @property
     def loss_fn(self):

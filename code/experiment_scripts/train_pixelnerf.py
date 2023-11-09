@@ -60,6 +60,7 @@ def train(cfg: DictConfig):
 
     modelwrapper = PixelNeRFModelWrapper(
         model, image_size=dataset.image_size, loss_type="l2",  # L1 or L2
+        lpips_model_path=cfg.lpips_model_path
     ).cuda()
     print(f"using lr {cfg.lr}")
     trainer = Trainer(

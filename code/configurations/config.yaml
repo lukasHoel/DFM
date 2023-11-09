@@ -53,3 +53,7 @@ noise: 0.0
 eval_10_frame: False  
 rebuttal_indices: False 
 load_pn: False
+
+co3d_root: "/home/hoellein/datasets/co3d"
+co3d_cache_root: "dataset_cache_new"
+lpips_model_path: null

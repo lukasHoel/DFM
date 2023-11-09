@@ -24,6 +24,7 @@ from accelerate import DistributedDataParallelKwargs
 from ..layers import *
 from ..losses import *
 import lpips
+import os
 
 
 # constants
@@ -104,6 +105,7 @@ class GaussianDiffusion(nn.Module):
         use_guidance=False,
         guidance_scale=1.0,
         temperature=1.0,
+        lpips_model_path=None,
     ):
         super().__init__()
         assert not (type(self) == GaussianDiffusion and model.channels != model.out_dim)
@@ -217,7 +219,7 @@ class GaussianDiffusion(nn.Module):
         # auto-normalization of data [0, 1] -> [-1, 1] - can turn off by setting it to be False
         self.normalize = normalize_to_neg_one_to_one if auto_normalize else identity
         self.unnormalize = unnormalize_to_zero_to_one if auto_normalize else identity
-        self.perceptual_loss = lpips.LPIPS(net="vgg")
+        self.perceptual_loss = lpips.LPIPS(net="vgg", model_path=lpips_model_path)
 
     def predict_start_from_noise(self, x_t, t, noise):
         return (

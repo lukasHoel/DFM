@@ -149,6 +149,7 @@ def train(cfg: DictConfig):
         loss_type="l2",  # L1 or L2
         objective="pred_x0",
         beta_schedule="cosine",
+        lpips_model_path=cfg.lpips_model_path
     ).to(accelerator.device)
 
     trainer = Trainer(

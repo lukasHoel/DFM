@@ -1,6 +1,7 @@
 from .pixelnerf_helpers import *
 from .resnet import PixelNeRFTimeEmbed, BasicBlockTimeEmbed
 from .transformer.DiT import DiT
+from ..utils import *
 
 
 class PixelNeRFModelCond(nn.Module):

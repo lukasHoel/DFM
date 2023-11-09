@@ -68,6 +68,7 @@ def train(cfg: DictConfig):
         beta_schedule="cosine",
         use_guidance=cfg.use_guidance,
         guidance_scale=1.0,
+        lpips_model_path=cfg.lpips_model_path,
     ).cuda()
 
     print(f"using settings {train_settings}")

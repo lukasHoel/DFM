@@ -1,6 +1,6 @@
-
+import numpy as np
 from .renderer import *
-
+from .resnetfc_time_embed import ResnetFCTimeEmbed
 
 def pixel_aligned_features_cond(
     coords_3d_world,

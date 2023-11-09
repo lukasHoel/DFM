@@ -22,7 +22,8 @@ def get_dataset(config: DictConfig) -> Dataset:
         else:
             categories = ["hydrant"]
         return CO3DDataset(
-            root=None,
+            root=config.co3d_root,
+            cache_root=config.co3d_cache_root,
             num_context=config.num_context,
             num_target=config.num_target,
             stage=config.stage,
