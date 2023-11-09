@@ -6,7 +6,6 @@ from typing import Callable, Optional, Tuple
 from torch import nn
 from torch.nn import functional as F
 from torch import Tensor, device
-from typeguard import typechecked
 from torchtyping import TensorType
 from einops import rearrange
 from ..geometry import *
@@ -409,7 +408,6 @@ class NoVolumeRenderer(nn.Module):
             nn.Linear(128, 128),
         )
 
-    @typechecked
     def forward(
         self,
         cam2world: TensorType["camera_batch", 4, 4, torch.float32],
