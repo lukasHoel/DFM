@@ -431,4 +431,5 @@ class Trainer(object):
         for image_key, image in image_dict.items():
             with pmgr.open(os.path.join(output_dir, image_key), "wb") as f:
                 image = (image * 255).astype(np.uint8)
+                print("try to save", image_key, image.shape, image.min(), image.max(), image.dtype)
                 Image.fromarray(image).save(f)
