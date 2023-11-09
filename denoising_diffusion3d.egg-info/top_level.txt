@@ -1,3 +1,0 @@
-PixelNeRF
-data_io
-denoising_diffusion_pytorch
