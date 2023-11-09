@@ -5,11 +5,10 @@ from pathlib import Path
 import torch
 from omegaconf import DictConfig
 
-from .implicitron.dataset.dataset_base import FrameData
-from .implicitron.dataset.dataset_map_provider import DatasetMap
-from .implicitron.dataset.json_index_dataset_map_provider_v2 import JsonIndexDatasetMapProviderV2
-#from .co3d.json_index_dataset_map_provider_v2 import JsonIndexDatasetMapProviderV2
-from .implicitron.tools.config import expand_args_fields
+from pytorch3d.implicitron.dataset.dataset_base import FrameData
+from pytorch3d.implicitron.dataset.dataset_map_provider import DatasetMap
+from .co3d.json_index_dataset_map_provider_v2 import JsonIndexDatasetMapProviderV2
+from pytorch3d.implicitron.tools.config import expand_args_fields
 from pytorch3d.utils import opencv_from_cameras_projection
 from ..geometry import get_opencv_pixel_coordinates
 from einops import rearrange
@@ -619,7 +618,7 @@ if __name__ == '__main__':
     if args.all_classes:
         categories = ["apple", "ball",  "bench",  "cake",  "donut",  "hydrant", "plant", "suitcase", "teddybear", "vase"]
     else:
-        categories = ["hydrant", "teddybear"]
+        categories = ["hydrant"]
 
     if args.generate_info_file:
         init_info_file(categories, args.dataset_root)

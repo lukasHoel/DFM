@@ -24,8 +24,8 @@ from typing import (
 import numpy as np
 import torch
 
-from ..dataset import types
-from ..dataset.utils import (
+from pytorch3d.implicitron.dataset import types
+from pytorch3d.implicitron.dataset.utils import (
     adjust_camera_to_bbox_crop_,
     adjust_camera_to_image_scale_,
     bbox_xyxy_to_xywh,
@@ -43,7 +43,7 @@ from ..dataset.utils import (
     resize_image,
     safe_as_tensor,
 )
-from ..tools.config import registry, ReplaceableBase
+from pytorch3d.implicitron.tools.config import registry, ReplaceableBase
 from pytorch3d.renderer.camera_utils import join_cameras_as_batch
 from pytorch3d.renderer.cameras import CamerasBase, PerspectiveCameras
 from pytorch3d.structures.pointclouds import join_pointclouds_as_batch, Pointclouds

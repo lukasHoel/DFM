@@ -36,11 +36,6 @@ if FBENV:
 
     pmgr.register_handler(ManifoldPathHandler())
 
-if FBENV:
-    from x3d.third_party.tyro import tyro
-else:
-    import tyro
-
 
 def is_manifold_path(data_fp: str):
     return data_fp.startswith("manifold://")
