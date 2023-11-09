@@ -99,7 +99,7 @@ def train(cfg: DictConfig):
 
     # dataset
     train_batch_size = 1
-    cfg.stage = 'train'  ## TODO FIXME val
+    cfg.stage = 'val'
     dataset = data_io.get_dataset(cfg)
     dataset.num_context = 1
     dl = DataLoader(
