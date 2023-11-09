@@ -44,7 +44,7 @@ def train(cfg: DictConfig):
         batch_size=train_settings["batch_size"],
         shuffle=True,
         pin_memory=True,
-        num_workers=8,
+        num_workers=0,
         worker_init_fn=lambda id: np.random.seed(id * 4),
     )
     model_type = cfg.model_type

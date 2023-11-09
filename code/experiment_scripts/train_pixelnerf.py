@@ -38,7 +38,7 @@ def train(cfg: DictConfig):
         batch_size=train_batch_size,
         shuffle=True,
         pin_memory=False,
-        num_workers=12,
+        num_workers=0,
     )
 
     # model = PixelNeRFModel(near=1.2, far=4.0, dim=64, dim_mults=(1, 1, 2, 4)).cuda()
