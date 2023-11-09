@@ -414,7 +414,9 @@ def compute_scene_scale(categories, dataset_root):
             for dataset_class, dataset in enumerate(self.datasets):
                 all_sequence = sorted(list(dataset.sequence_names()))
                 all_sequence = [s for s in all_sequence if os.path.exists(os.path.join(dataset_root, sel_categories[dataset_class], s))]
+                print("n seq before skip sequence filtering", len(all_sequence))
                 all_sequence = [s for s in all_sequence if s not in skip_sequences]
+                print("n seq after skip sequence filtering", len(all_sequence))
                 self.all_sequences.extend(all_sequence)
                 self.index_to_class.append(np.ones(len(all_sequence)) * dataset_class)
 
@@ -605,7 +607,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     torch.multiprocessing.set_sharing_strategy('file_system')
-    
+
     if args.all_classes:
         categories = ["apple", "ball",  "bench",  "cake",  "donut",  "hydrant", "plant", "suitcase", "teddybear", "vase"]
     else:
