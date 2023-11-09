@@ -6,24 +6,19 @@ from typing import Callable, Optional, Tuple
 from torch import nn
 from torch.nn import functional as F
 from torch import Tensor, device
-from torchtyping import TensorType
 from einops import rearrange
 from ..geometry import *
 
 
 def sample_points_along_rays(
-    z_near: TensorType["camera_batch", torch.float32],
-    z_far: TensorType["camera_batch", torch.float32],
+    z_near,
+    z_far,
     num_samples: int,
-    ray_origins: TensorType["camera_batch", "ray_batch", 3, torch.float32],
-    ray_directions: TensorType["camera_batch", "ray_batch", 3, torch.float32],
+    ray_origins,
+    ray_directions,
     lindisp: bool,
     device: torch.device,
-) -> Tuple[
-    TensorType["camera_batch", "ray_batch", "z_batch", 3, torch.float32],
-    TensorType["camera_batch", "ray_batch", "z_batch", 1, torch.float32],
-    TensorType["camera_batch", "ray_batch", "z_batch", 3, torch.float32],
-]:
+):
     # Define num_samples linearly spaced depth values between z_near and z_far.
     z_vals = torch.linspace(0, 1, num_samples, device=device)
     z_vals = rearrange(z_vals, "z -> () () z ()")
@@ -241,13 +236,13 @@ class VolumeRenderer(nn.Module):
 
     def forward(
         self,
-        cam2world: TensorType["camera_batch", 4, 4, torch.float32],
-        intrinsics: TensorType["camera_batch", 3, 3, torch.float32],
-        x_pix: TensorType["camera_batch", "ray_batch", 2, torch.float32],
+        cam2world,
+        intrinsics,
+        x_pix,
         radiance_field: Callable,
         # add_noise: bool = False,
-        z_near: Optional[TensorType["camera_batch", torch.float32]] = None,
-        z_far: Optional[TensorType["camera_batch", torch.float32]] = None,
+        z_near = None,
+        z_far = None,
         top_down: bool = False,
     ):
         """
@@ -410,13 +405,13 @@ class NoVolumeRenderer(nn.Module):
 
     def forward(
         self,
-        cam2world: TensorType["camera_batch", 4, 4, torch.float32],
-        intrinsics: TensorType["camera_batch", 3, 3, torch.float32],
-        x_pix: TensorType["camera_batch", "ray_batch", 2, torch.float32],
+        cam2world,
+        intrinsics,
+        x_pix,
         radiance_field: Callable,
         # add_noise: bool = False,
-        z_near: Optional[TensorType["camera_batch", torch.float32]] = None,
-        z_far: Optional[TensorType["camera_batch", torch.float32]] = None,
+        z_near = None,
+        z_far = None,
     ):
         """
         Takes as inputs ray origins and directions - samples points along the
