@@ -80,7 +80,8 @@ class CO3DDataset(Dataset):
         scale_aug_ratio: float = 0,
         mean_depth_scale: float =10.0,
         noise: float = 0.0,
-        eval_10_frame: bool = False 
+        eval_10_frame: bool = False,
+        cache_root: str = "dataset_cache_new",
     ) -> None:
         super().__init__()
         self.stage = stage
@@ -97,7 +98,7 @@ class CO3DDataset(Dataset):
         per_category_camera_score_threshold = []
         camera_quality_score_list = [] 
         for category_index, category in enumerate(categories):
-            cache_path = f'dataset_cache_new/{category}_{stage}.pt'
+            cache_path = f'{cache_root}/{category}_{stage}.pt'
             with pmgr.open(cache_path, "rb") as f:
                 dataset_map = torch.load(f, map_location='cpu')
             datasets.append(dataset_map)
@@ -105,7 +106,7 @@ class CO3DDataset(Dataset):
 
             # load the per-class camera quality score 
             if ISFILTER:
-                with pmgr.open(f'dataset_cache_new/camera_quality_dict_{category}.pt', "rb") as f:
+                with pmgr.open(f'{cache_root}/camera_quality_dict_{category}.pt', "rb") as f:
                     camera_quality_score = torch.load(f, map_location='cpu')
                 scores = torch.stack([v for v in camera_quality_score.values()])
                 score_threshold = torch.sort(scores, descending=True)[0][min(filter_num, scores.shape[0] - 1)]
@@ -140,7 +141,7 @@ class CO3DDataset(Dataset):
             x_resolution=self.image_size, y_resolution=self.image_size
         )
         self.normalize = normalize_to_neg_one_to_one
-        with pmgr.open(f'./dataset_cache_new/scale_dict.pt', "rb") as f:
+        with pmgr.open(f'{cache_root}/scale_dict.pt', "rb") as f:
             self.scene_scales = torch.load(f, map_location='cpu')
         self.mean_scale = mean_depth_scale
         self.scale_aug_ratio = scale_aug_ratio
