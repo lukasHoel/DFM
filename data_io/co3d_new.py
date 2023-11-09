@@ -474,6 +474,7 @@ def compute_scene_scale(categories, dataset_root):
     if os.path.exists('dataset_cache_new/scale_dict.pt'):
         scale_dict = torch.load('dataset_cache_new/scale_dict.pt')
         skip_sequences = list(scale_dict.keys())
+        print(f"loaded scale_dict, alread have {len(skip_sequences)} sequences")
     else:
         scale_dict = {}
         skip_sequences = []
