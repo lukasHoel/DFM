@@ -1328,7 +1328,7 @@ class Trainer(object):
             jet_depth(depth[:].cpu().detach().view(-1, h, w))
         ).permute(0, 3, 1, 2)
         depths = make_grid(depth)
-        depths = depths.permute(1, 2, 0).numpy()
+        depths = depths.numpy()
 
         def prepare_depths(depth):
             depth = torch.from_numpy(
@@ -1348,21 +1348,21 @@ class Trainer(object):
         image_dict = {
             "visualization_depth.png": depths,
             "visualization_noisy_input.png":
-                make_grid(input[:].cpu().detach()).permute(1, 2, 0).numpy(),
+                make_grid(input[:].cpu().detach()).numpy(),
             "result_output.png":
-                make_grid(output[:].cpu().detach()).permute(1, 2, 0).numpy()
+                make_grid(output[:].cpu().detach()).numpy()
             ,
             "result_target.png":
-                make_grid(t_gt[:].cpu().detach()).permute(1, 2, 0).numpy()
+                make_grid(t_gt[:].cpu().detach()).numpy()
             ,
             "result_ctxt_rgb.png":
-                make_grid(ctxt_rgb[:].cpu().detach()).permute(1, 2, 0).numpy()
+                make_grid(ctxt_rgb[:].cpu().detach()).numpy()
             ,
             "visualization_target_patch.png":
-                make_grid(target_patch[:].cpu().detach()).permute(1, 2, 0).numpy()
+                make_grid(target_patch[:].cpu().detach()).numpy()
             ,
             "result_target_out.png":
-                make_grid(target_out[:].cpu().detach()).permute(1, 2, 0).numpy()
+                make_grid(target_out[:].cpu().detach()).numpy()
             ,
         }
         if rgb_intermediate is not None:
@@ -1370,7 +1370,6 @@ class Trainer(object):
                 {
                     "visualization_rgb_intermediate.png":
                         make_grid(rgb_intermediate[:].cpu().detach())
-                        .permute(1, 2, 0)
                         .numpy()
 
                 }
@@ -1380,7 +1379,6 @@ class Trainer(object):
                 {
                     "result_x_self_cond.png":
                         make_grid(x_self_cond[:].cpu().detach())
-                        .permute(1, 2, 0)
                         .numpy()
 
                 }
@@ -1390,7 +1388,7 @@ class Trainer(object):
             masks = rearrange(masks, "b t c h w -> (b t) c h w").cpu().detach()
             masks = repeat(masks, "b c h w -> b (n c) h w", n=3)
             masks = make_grid(masks)
-            masks = masks.permute(1, 2, 0).numpy()
+            masks = masks.numpy()
             image_dict.update({"visualization_masks.png": masks})
 
         if rendered_trgt_depth is not None:
@@ -1414,7 +1412,6 @@ class Trainer(object):
                 {
                     "visualization_rendered_trgt_feats.png":
                         make_grid(rendered_trgt_feats[:10][:, 3:6, ...].cpu().detach())
-                        .permute(1, 2, 0)
                         .numpy()
                     ,
                 }
@@ -1425,7 +1422,6 @@ class Trainer(object):
                 {
                     "visualization_rendered_trgt_img.png":
                         make_grid(rendered_trgt_img[:10].cpu().detach())
-                        .permute(1, 2, 0)
                         .numpy()
                     ,
                 }
@@ -1433,15 +1429,16 @@ class Trainer(object):
 
         if all_images is not None:
             images = make_grid(all_images.cpu().detach())
-            images = images.permute(1, 2, 0).numpy()
+            images = images.numpy()
             image_dict.update({"visualization_samples.png": images})
             if all_rgb is not None:
                 rgb = make_grid(all_rgb.cpu().detach())
-                rgb = rgb.permute(1, 2, 0).numpy()
+                rgb = rgb.numpy()
                 image_dict.update({"visualization_rgb.png": rgb})
 
         for image_key, image in image_dict.items():
             with pmgr.open(os.path.join(output_dir, image_key), "wb") as f:
+                image = (image * 255).astype(np.uint8)
                 Image.fromarray(image).save(f)
 
         print(f"end log summary sample")
