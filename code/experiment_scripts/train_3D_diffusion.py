@@ -93,8 +93,8 @@ def train(cfg: DictConfig):
         ema_decay=cfg.ema_decay,  # exponential moving average decay
         amp=False,  # turn on mixed precision
         sample_every=2000,
-        wandb_every=500,
-        save_every=2000,
+        wandb_every=cfg.val_every,
+        save_every=cfg.save_every,
         num_samples=1,
         warmup_period=warmup_period,
         checkpoint_path=cfg.checkpoint_path,

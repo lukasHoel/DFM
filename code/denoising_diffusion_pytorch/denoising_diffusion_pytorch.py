@@ -1242,7 +1242,7 @@ class Trainer(object):
                     # self.ema.to(device)
                     self.ema.update()
 
-                    if self.step != 0 and self.step % self.sample_every == 0:
+                    if self.step % self.sample_every == 0:
                         self.ema.ema_model.eval()
 
                         with torch.no_grad():
@@ -1278,12 +1278,12 @@ class Trainer(object):
                         self.step % self.wandb_every == 0
                         and accelerator.is_main_process
                     ):
-                        self.wandb_summary(all_images, all_videos_list, all_rgb, misc, output_dir=self.results_folder)
+                        self.wandb_summary(all_images, all_videos_list, all_rgb, misc, output_dir=self.results_folder, step=self.step)
 
-                        if self.step != 0 and self.step % self.save_every == 0:
-                            milestone = self.step // self.save_every
-                            self.save(milestone)
-                            print(f"saved model at {milestone} milestones")
+                    if self.step % self.save_every == 0 and accelerator.is_main_process:
+                        milestone = self.step // self.save_every
+                        self.save(milestone)
+                        print(f"saved model at {milestone} milestones")
 
                 self.step += 1
 
@@ -1296,8 +1296,8 @@ class Trainer(object):
 
         accelerator.print("training complete")
 
-    def wandb_summary(self, all_images, sampled_videos, all_rgb, misc, output_dir):
-        print("log summary")
+    def wandb_summary(self, all_images, sampled_videos, all_rgb, misc, output_dir, step):
+        print("log summary at step", step)
         (
             input,
             t_gt,
@@ -1345,29 +1345,29 @@ class Trainer(object):
 
         # rendered_ctxt_depths = prepare_depths(rendered_ctxt_depth)
         image_dict = {
-            "visualization_depth.png": depths,
-            "visualization_noisy_input.png":
+            f"visualization_depth_{step:08d}.png": depths,
+            f"visualization_noisy_input_{step:08d}.png":
                 make_grid(input[:].cpu().detach()),
-            "result_output.png":
+            f"result_output_{step:08d}.png":
                 make_grid(output[:].cpu().detach())
             ,
-            "result_target.png":
+            f"result_target_{step:08d}.png":
                 make_grid(t_gt[:].cpu().detach())
             ,
-            "result_ctxt_rgb.png":
+            f"result_ctxt_rgb_{step:08d}.png":
                 make_grid(ctxt_rgb[:].cpu().detach())
             ,
-            "visualization_target_patch.png":
+            f"visualization_target_patch_{step:08d}.png":
                 make_grid(target_patch[:].cpu().detach())
             ,
-            "result_target_out.png":
+            f"result_target_out_{step:08d}.png":
                 make_grid(target_out[:].cpu().detach())
             ,
         }
         if rgb_intermediate is not None:
             image_dict.update(
                 {
-                    "visualization_rgb_intermediate.png":
+                    f"visualization_rgb_intermediate_{step:08d}.png":
                         make_grid(rgb_intermediate[:].cpu().detach())
 
                 }
@@ -1375,7 +1375,7 @@ class Trainer(object):
         if x_self_cond is not None:
             image_dict.update(
                 {
-                    "result_x_self_cond.png":
+                    f"result_x_self_cond_{step:08d}.png":
                         make_grid(x_self_cond[:].cpu().detach())
 
                 }
@@ -1385,7 +1385,7 @@ class Trainer(object):
             masks = rearrange(masks, "b t c h w -> (b t) c h w").cpu().detach()
             masks = repeat(masks, "b c h w -> b (n c) h w", n=3)
             masks = make_grid(masks)
-            image_dict.update({"visualization_masks.png": masks})
+            image_dict.update({f"visualization_masks_{step:08d}.png": masks})
 
         if rendered_trgt_depth is not None:
             rendered_trgt_depths = prepare_depths(rendered_trgt_depth)
@@ -1397,7 +1397,7 @@ class Trainer(object):
                     #     .permute(1, 2, 0)
                     #     .numpy()
                     # ),
-                    "visualization_rendered_trgt_depth.png": rendered_trgt_depths,
+                    f"visualization_rendered_trgt_depth_{step:08d}.png": rendered_trgt_depths,
                 }
             )
         # check if rendered_trgt_feats has 0 size
@@ -1406,7 +1406,7 @@ class Trainer(object):
         if rendered_trgt_feats.numel() > 0:
             image_dict.update(
                 {
-                    "visualization_rendered_trgt_feats.png":
+                    f"visualization_rendered_trgt_feats_{step:08d}.png":
                         make_grid(rendered_trgt_feats[:10][:, 3:6, ...].cpu().detach())
                     ,
                 }
@@ -1415,7 +1415,7 @@ class Trainer(object):
         if rendered_trgt_img is not None:
             image_dict.update(
                 {
-                    "visualization_rendered_trgt_img.png":
+                    f"visualization_rendered_trgt_img_{step:08d}.png":
                         make_grid(rendered_trgt_img[:10].cpu().detach())
                     ,
                 }
@@ -1424,7 +1424,7 @@ class Trainer(object):
         if all_images is not None:
             images = make_grid(all_images.cpu().detach())
             images = images.numpy()
-            image_dict.update({"visualization_samples.png": images})
+            image_dict.update({f"visualization_samples_{step:08d}.png": images})
             if all_rgb is not None:
                 rgb = make_grid(all_rgb.cpu().detach())
                 rgb = rgb.numpy()
@@ -1433,7 +1433,7 @@ class Trainer(object):
         for image_key, image in image_dict.items():
             with pmgr.open(os.path.join(output_dir, image_key), "wb") as f:
                 image = (image * 255).permute(1, 2, 0).numpy().astype(np.uint8)
-                print("try to save", image_key, image.shape, image.min(), image.max(), image.dtype)
+                print("save", image_key, image.shape, image.min(), image.max(), image.dtype)
                 Image.fromarray(image).save(f)
 
         print(f"end log summary sample")

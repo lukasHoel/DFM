@@ -393,9 +393,9 @@ class Trainer(object):
                     self.ema.update()
 
                     if self.step % self.wandb_every == 0:
-                        self.wandb_summary(misc, output_dir=self.results_folder)
+                        self.wandb_summary(misc, output_dir=self.results_folder, step=self.step)
 
-                    if self.step != 0 and self.step % self.save_every == 0:
+                    if self.step % self.save_every == 0:
                         milestone = self.step // self.save_every
                         self.save(milestone)
                 self.step += 1
@@ -405,8 +405,8 @@ class Trainer(object):
 
         accelerator.print("training complete")
 
-    def wandb_summary(self, misc, output_dir):
-        print("log summary")
+    def wandb_summary(self, misc, output_dir, step):
+        print("log summary at step", step)
         (sampled_output, t_gt, ctxt_rgb, t, depth, output, frames,) = misc
 
         t_gt = rearrange(t_gt, "b t c h w -> (b t) c h w")
@@ -418,17 +418,17 @@ class Trainer(object):
         depths = make_grid(depth)
 
         image_dict = {
-            "visualization_depth.png": depths,
-            "visualization_output.png":
+            f"visualization_depth_{step:08d}.png": depths,
+            f"visualization_output_{step:08d}.png":
                 make_grid(output.cpu().detach()),
-            "visualization_target.png":
+            f"visualization_target_{step:08d}.png":
                 make_grid(t_gt.cpu().detach()),
-            "visualization_ctxt_rgb.png":
+            f"visualization_ctxt_rgb_{step:08d}.png":
                 make_grid(ctxt_rgb.cpu().detach()),
         }
 
         for image_key, image in image_dict.items():
             with pmgr.open(os.path.join(output_dir, image_key), "wb") as f:
                 image = (image * 255).permute(1, 2, 0).numpy().astype(np.uint8)
-                print("try to save", image_key, image.shape, image.min(), image.max(), image.dtype)
+                print("save", image_key, image.shape, image.min(), image.max(), image.dtype)
                 Image.fromarray(image).save(f)
