@@ -262,12 +262,12 @@ def train(cfg: DictConfig):
                     target_frames = [((frame*255).permute(1, 2, 0).numpy().astype(np.uint8)) for frame in target]
 
                     # save all frames to disk 
-                    pmgr.mkdirs(os.path.join(run_dir, "generated_frames"), exist_ok=True)
+                    pmgr.mkdirs(os.path.join(run_dir, "generated_frames"))
                     for frame_idx, frame in enumerate(frames):
                         with pmgr.open(f"{run_dir}/generated_frames/video_{video_idx:04d}_frame_{frame_idx:04d}_var{j}.png", "wb") as f:
                             Image.fromarray(frame).save(f)
 
-                    pmgr.mkdirs(os.path.join(run_dir, "target_frames"), exist_ok=True)
+                    pmgr.mkdirs(os.path.join(run_dir, "target_frames"))
                     for frame_idx, frame in enumerate(target_frames):
                         with pmgr.open(f"{run_dir}/target_frames/video_{video_idx:04d}_frame_{frame_idx:04d}_var{j}.png", "wb") as f:
                             Image.fromarray(frame).save(f)
@@ -314,12 +314,12 @@ def train(cfg: DictConfig):
                     target_frames = [((frame*255).permute(1, 2, 0).numpy().astype(np.uint8)) for frame in target]
 
                     # save all frames to disk
-                    pmgr.mkdirs(os.path.join(run_dir, "generated_frames"), exist_ok=True)
+                    pmgr.mkdirs(os.path.join(run_dir, "generated_frames"))
                     for frame_idx, frame in enumerate(frames):
                         with pmgr.open(f"{run_dir}/generated_frames/video_{video_idx:04d}_frame_{frame_idx:04d}_var{j}.png", "wb") as f:
                             Image.fromarray(frame).save(f)
 
-                    pmgr.mkdirs(os.path.join(run_dir, "target_frames"), exist_ok=True)
+                    pmgr.mkdirs(os.path.join(run_dir, "target_frames"))
                     for frame_idx, frame in enumerate(target_frames):
                         with pmgr.open(f"{run_dir}/target_frames/video_{video_idx:04d}_frame_{frame_idx:04d}_var{j}.png", "wb") as f:
                             Image.fromarray(frame).save(f)
