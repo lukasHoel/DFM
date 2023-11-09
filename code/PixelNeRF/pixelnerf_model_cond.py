@@ -700,7 +700,6 @@ class PixelNeRFModelCond(nn.Module):
 
         return self.normalize(rgb_refine), depth, misc
 
-    @typechecked
     def radiance_field_joint(
         self, all_feats, all_c2w, intrinsics, time_embed=None, return_mlp_input=False
     ) -> Callable:
@@ -716,7 +715,6 @@ class PixelNeRFModelCond(nn.Module):
             fine=fine,
         )
 
-    @typechecked
     def radiance_field_joint_coarse(
         self, all_feats, all_c2w, intrinsics, time_embed=None, return_mlp_input=False
     ) -> Callable:

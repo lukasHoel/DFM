@@ -306,7 +306,6 @@ class PixelNeRFModelVanilla(PixelNeRFModel):
 
         return self.normalize(rgb), depth, misc
 
-    @typechecked
     def radiance_field_cond(self, feats, c2w, intrinsics, time_embed=None,) -> Callable:
         return lambda x, v, fine: self.pixelNeRF(
             xyz=x,
