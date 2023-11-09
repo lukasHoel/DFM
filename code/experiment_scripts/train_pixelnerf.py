@@ -77,8 +77,8 @@ def train(cfg: DictConfig):
         dataloader=dl,
         train_batch_size=train_batch_size,
         train_lr=cfg.lr,
-        train_num_steps=700000,  # total training steps
-        gradient_accumulate_every=1,  # gradient accumulation steps
+        train_num_steps=cfg.train_num_steps,  # total training steps
+        gradient_accumulate_every=cfg.grad_acc_steps,  # gradient accumulation steps
         ema_decay=cfg.ema_decay,  # exponential moving average decay
         amp=False,  # turn on mixed precision
         sample_every=5000,

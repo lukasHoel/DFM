@@ -58,3 +58,6 @@ co3d_root: "/home/hoellein/datasets/co3d"
 co3d_cache_root: "dataset_cache_new"
 lpips_model_path: null
 output_dir: "outputs"
+
+grad_acc_steps: 1
+train_num_steps: 100000
