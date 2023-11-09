@@ -619,7 +619,7 @@ if __name__ == '__main__':
     if args.all_classes:
         categories = ["apple", "ball",  "bench",  "cake",  "donut",  "hydrant", "plant", "suitcase", "teddybear", "vase"]
     else:
-        categories = ["hydrant", "teddybear"]
+        categories = ["hydrant", "teddybear", "donut", "apple", "vase", "plant"]
 
     if args.generate_info_file:
         init_info_file(categories, args.dataset_root)
