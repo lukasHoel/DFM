@@ -2,13 +2,15 @@
 import hydra
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
+from torch.distributed.elastic.multiprocessing.errors import record
+
 
 from ..denoising_diffusion_pytorch.denoising_diffusion_pytorch import (
     GaussianDiffusion,
     Trainer,
 )
 from ..data_io import get_dataset
-from ..data_io.io_utils import pmgr
+from ..data_io.io_utils import pmgr, FBENV
 
 from ..PixelNeRF import PixelNeRFModelCond
 import numpy as np
@@ -196,6 +198,33 @@ def get_train_settings(name, ngpus):
         raise ValueError(f"unknown setting {name}")
 
 
+@record
+def launch_fbcode():
+    from uuid import uuid4
+    import torch.distributed.launcher as pet
+
+    num_gpus = 8
+    lc = pet.LaunchConfig(
+        # min, max nodes == 1 since we assume devgpu testing
+        min_nodes=1,
+        max_nodes=1,
+        nproc_per_node=num_gpus,
+        rdzv_backend="zeus",
+        # run_id just has to be globally unique
+        run_id=f"nerf_completion_baseline_dfm_run_{uuid4()}",
+        # for fault tolerance; for testing set it to 0 (no fault tolerance)
+        max_restarts=0,
+        start_method="spawn",
+    )
+
+    # The "train" function is called inside the elastic_launch along.
+    print("launcher_config:", lc)
+    pet.elastic_launch(lc, train)()
+
+
 if __name__ == "__main__":
     print(f"running {__file__}")
-    train()
+    if FBENV:
+        launch_fbcode()
+    else:
+        train()
