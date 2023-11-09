@@ -1328,14 +1328,13 @@ class Trainer(object):
             jet_depth(depth[:].cpu().detach().view(-1, h, w))
         ).permute(0, 3, 1, 2)
         depths = make_grid(depth)
-        depths = depths.numpy()
+        depths = depths
 
         def prepare_depths(depth):
             depth = torch.from_numpy(
                 jet_depth(depth[:].cpu().detach().view(-1, h, w))
             ).permute(0, 3, 1, 2)
             depths = make_grid(depth)
-            depths = depths.permute(1, 2, 0).numpy()
             return depths
 
         # clamp input, output, target to [0, 1]
@@ -1348,21 +1347,21 @@ class Trainer(object):
         image_dict = {
             "visualization_depth.png": depths,
             "visualization_noisy_input.png":
-                make_grid(input[:].cpu().detach()).numpy(),
+                make_grid(input[:].cpu().detach()),
             "result_output.png":
-                make_grid(output[:].cpu().detach()).numpy()
+                make_grid(output[:].cpu().detach())
             ,
             "result_target.png":
-                make_grid(t_gt[:].cpu().detach()).numpy()
+                make_grid(t_gt[:].cpu().detach())
             ,
             "result_ctxt_rgb.png":
-                make_grid(ctxt_rgb[:].cpu().detach()).numpy()
+                make_grid(ctxt_rgb[:].cpu().detach())
             ,
             "visualization_target_patch.png":
-                make_grid(target_patch[:].cpu().detach()).numpy()
+                make_grid(target_patch[:].cpu().detach())
             ,
             "result_target_out.png":
-                make_grid(target_out[:].cpu().detach()).numpy()
+                make_grid(target_out[:].cpu().detach())
             ,
         }
         if rgb_intermediate is not None:
@@ -1370,7 +1369,6 @@ class Trainer(object):
                 {
                     "visualization_rgb_intermediate.png":
                         make_grid(rgb_intermediate[:].cpu().detach())
-                        .numpy()
 
                 }
             )
@@ -1379,7 +1377,6 @@ class Trainer(object):
                 {
                     "result_x_self_cond.png":
                         make_grid(x_self_cond[:].cpu().detach())
-                        .numpy()
 
                 }
             )
@@ -1388,7 +1385,6 @@ class Trainer(object):
             masks = rearrange(masks, "b t c h w -> (b t) c h w").cpu().detach()
             masks = repeat(masks, "b c h w -> b (n c) h w", n=3)
             masks = make_grid(masks)
-            masks = masks.numpy()
             image_dict.update({"visualization_masks.png": masks})
 
         if rendered_trgt_depth is not None:
@@ -1412,7 +1408,6 @@ class Trainer(object):
                 {
                     "visualization_rendered_trgt_feats.png":
                         make_grid(rendered_trgt_feats[:10][:, 3:6, ...].cpu().detach())
-                        .numpy()
                     ,
                 }
             )
@@ -1422,7 +1417,6 @@ class Trainer(object):
                 {
                     "visualization_rendered_trgt_img.png":
                         make_grid(rendered_trgt_img[:10].cpu().detach())
-                        .numpy()
                     ,
                 }
             )
@@ -1438,7 +1432,8 @@ class Trainer(object):
 
         for image_key, image in image_dict.items():
             with pmgr.open(os.path.join(output_dir, image_key), "wb") as f:
-                image = (image * 255).astype(np.uint8)
+                image = (image * 255).permute(1, 2, 0).numpy().astype(np.uint8)
+                print("try to save", image_key, image.shape, image.min(), image.max(), image.dtype)
                 Image.fromarray(image).save(f)
 
         print(f"end log summary sample")

@@ -416,20 +416,19 @@ class Trainer(object):
             jet_depth(depth.cpu().detach().view(-1, h, w))
         ).permute(0, 3, 1, 2)
         depths = make_grid(depth)
-        depths = depths.numpy()
 
         image_dict = {
             "visualization_depth.png": depths,
             "visualization_output.png":
-                make_grid(output.cpu().detach()).numpy(),
+                make_grid(output.cpu().detach()),
             "visualization_target.png":
-                make_grid(t_gt.cpu().detach()).numpy(),
+                make_grid(t_gt.cpu().detach()),
             "visualization_ctxt_rgb.png":
-                make_grid(ctxt_rgb.cpu().detach()).numpy(),
+                make_grid(ctxt_rgb.cpu().detach()),
         }
 
         for image_key, image in image_dict.items():
             with pmgr.open(os.path.join(output_dir, image_key), "wb") as f:
-                image = (image * 255).astype(np.uint8)
+                image = (image * 255).permute(1, 2, 0).numpy().astype(np.uint8)
                 print("try to save", image_key, image.shape, image.min(), image.max(), image.dtype)
                 Image.fromarray(image).save(f)
