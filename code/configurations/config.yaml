@@ -45,7 +45,8 @@ end_idx: 50
 use_abs_pose: False
 test_autoregressive_stepsize: 40
 scale_aug_ratio: 0
-all_class: False 
+all_class: False
+category: "hydrant"
 seed: 0
 use_dataset_pose: False
 noise: 0.0

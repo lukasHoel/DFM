@@ -98,7 +98,7 @@ def train(cfg: DictConfig):
         num_samples=1,
         warmup_period=warmup_period,
         checkpoint_path=cfg.checkpoint_path,
-        wandb_config=cfg.wandb,
+        wandb_config=None,
         run_name=cfg.name,
         dist_loss_weight=cfg.dataset.dist_loss_weight,
         depth_smooth_loss_weight=cfg.dataset.depth_smooth_loss_weight,

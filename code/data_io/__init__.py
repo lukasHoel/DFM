@@ -20,7 +20,7 @@ def get_dataset(config: DictConfig) -> Dataset:
         if config.all_class:
             categories = ["apple", "ball",  "bench",  "cake",  "donut",  "hydrant", "plant", "suitcase", "teddybear", "vase"]
         else:
-            categories = ["hydrant"]
+            categories = [config.category]
         return CO3DDataset(
             root=config.co3d_root,
             cache_root=config.co3d_cache_root,

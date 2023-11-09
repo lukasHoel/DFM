@@ -87,7 +87,7 @@ def train(cfg: DictConfig):
         num_samples=2,
         warmup_period=1_000,
         checkpoint_path=cfg.checkpoint_path,
-        wandb_config=cfg.wandb,
+        wandb_config=None,
         run_name=cfg.name,
     )
 
