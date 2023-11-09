@@ -1,20 +1,16 @@
 # adapted from https://github.com/lucidrains/denoising-diffusion-pytorch
-import sys
 import os
-import wandb
 import hydra
 from omegaconf import DictConfig
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from denoising_diffusion_pytorch.denoising_diffusion_pytorch import (
+from ..denoising_diffusion_pytorch.denoising_diffusion_pytorch import (
     GaussianDiffusion,
     Trainer,
 )
-import data_io
+from ..data_io import get_dataset
 
-from PixelNeRF import PixelNeRFModelCond
-import torch
+from ..PixelNeRF import PixelNeRFModelCond
 import numpy as np
 from accelerate import DistributedDataParallelKwargs
 from accelerate import Accelerator
@@ -34,8 +30,7 @@ def train(cfg: DictConfig):
         split_batches=True, mixed_precision="no", kwargs_handlers=[ddp_kwargs],
     )
 
-
-    dataset = data_io.get_dataset(cfg)
+    dataset = get_dataset(cfg)
     accelerator.print(f"length dataset {len(dataset)}")
 
     dl = DataLoader(

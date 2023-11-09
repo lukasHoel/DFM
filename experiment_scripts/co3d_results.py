@@ -1,40 +1,39 @@
-import sys
 import os
 import wandb
 import hydra
 from omegaconf import DictConfig
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from denoising_diffusion_pytorch.denoising_diffusion_pytorch import (
+from ..denoising_diffusion_pytorch.denoising_diffusion_pytorch import (
     GaussianDiffusion,
     Trainer,
 )
-import data_io
 from accelerate import Accelerator
 
-from PixelNeRF import PixelNeRFModelCond
-import torch
+from ..PixelNeRF import PixelNeRFModelCond
 import imageio
-import numpy as np
-from utils import *
+from ..utils import *
 from torchvision.utils import make_grid
-from numpy import random
 from accelerate.utils import set_seed
-import lpips 
-from einops import rearrange
-from PIL import Image 
+from PIL import Image
+
+from ..data_io.io_utils import pmgr
+from ..data_io import get_dataset
+
 
 def video_summary(run_dir, frames, depth_frames, name, fps=8):
     denoised_f = os.path.join(run_dir, f"rgb_{name}.mp4")
-    imageio.mimwrite(denoised_f, frames, fps=fps, quality=10)
+    with pmgr.open(denoised_f, "wb") as f:
+        imageio.mimwrite(f, frames, fps=fps, quality=10)
     denoised_f_depth = os.path.join(
         run_dir, f"depth_{name}.mp4"
     )
-    imageio.mimwrite(
-        denoised_f_depth, depth_frames, fps=fps, quality=10
-    )
+    with pmgr.open(denoised_f_depth, "wb") as f:
+        imageio.mimwrite(
+            f, depth_frames, fps=fps, quality=10
+        )
     return denoised_f, denoised_f_depth
+
 
 def prepare_depth(depth_frames, resolution=64):
     depth = torch.cat(depth_frames, dim=0)
@@ -51,6 +50,7 @@ def prepare_depth(depth_frames, resolution=64):
             depth[i].cpu().detach().numpy().astype(np.uint8)
         )
     return depth_frames
+
 
 def prepare_video_out(out, resolution=64):
     frames = out["videos"]
@@ -69,6 +69,7 @@ def prepare_video_out(out, resolution=64):
 
     return frames, depth_frames, conditioning_depth_img, out["depth_videos"] 
 
+
 def concat_list_to_image(frames, stride=4):
     new_frames = [] 
     for f in range(len(frames)):
@@ -79,6 +80,7 @@ def concat_list_to_image(frames, stride=4):
     frames_cat = torch.cat(frames, dim=1)
 
     return frames_cat 
+
 
 @hydra.main(
     version_base=None, config_path="../configurations/", config_name="config",
@@ -100,7 +102,7 @@ def train(cfg: DictConfig):
     # dataset
     train_batch_size = 1
     cfg.stage = 'val'
-    dataset = data_io.get_dataset(cfg)
+    dataset = get_dataset(cfg)
     dataset.num_context = 1
     dl = DataLoader(
         dataset,
@@ -169,8 +171,6 @@ def train(cfg: DictConfig):
         run_name=cfg.name,
         cfg=cfg
     )
-
-    perceptual_loss = lpips.LPIPS(net="vgg")
 
     sampling_type = cfg.sampling_type
     use_dataset_pose = cfg.use_dataset_pose
@@ -511,6 +511,7 @@ def train(cfg: DictConfig):
                             f"{run_dir}/generated_frames/{video_idx:04d}_frame_{frame_idx:04d}_depth.npy",
                             rgbd.numpy(),
                         )
+
 
 if __name__ == "__main__":
     train()

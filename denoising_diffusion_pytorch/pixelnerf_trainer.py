@@ -4,13 +4,7 @@ from pathlib import Path
 from collections import namedtuple
 from collections import OrderedDict
 
-import torch
-from torch import nn
-import torch.nn.functional as F
-
 from torch.optim import Adam
-
-from einops import reduce
 
 from tqdm.auto import tqdm
 from ema_pytorch import EMA
@@ -21,15 +15,11 @@ from torchvision.utils import make_grid
 from denoising_diffusion_pytorch.version import __version__
 
 import wandb
-import sys
-import os
 import imageio
 from accelerate import DistributedDataParallelKwargs
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# from utils import *
-from layers import *
-from losses import *
+from ..layers import *
+from ..losses import *
 import lpips
 
 # constants

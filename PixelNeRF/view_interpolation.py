@@ -1,13 +1,12 @@
 import torch
-from jaxtyping import Float
 from scipy.spatial.transform import Rotation as R
 from torch import Tensor
 
 
 @torch.no_grad()
 def interpolate_pose(
-    initial: Float[Tensor, "4 4"], final: Float[Tensor, "4 4"], t: float,
-) -> Float[Tensor, "4 4"]:
+    initial, final, t: float,
+):
     # Get the relative rotation.
     r_initial = initial[:3, :3]
     r_final = final[:3, :3]
@@ -36,6 +35,6 @@ def interpolate_pose(
 
 @torch.no_grad()
 def interpolate_intrinsics(
-    initial: Float[Tensor, "3 3"], final: Float[Tensor, "3 3"], t: float,
-) -> Float[Tensor, "3 3"]:
+    initial, final, t: float,
+):
     return initial + (final - initial) * t

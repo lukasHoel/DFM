@@ -5,8 +5,8 @@ import torch
 import torch.autograd.profiler as profiler
 from einops import rearrange, repeat
 
-from utils import *
-from layers import RandomOrLearnedSinusoidalPosEmb, SinusoidalPosEmb
+from ..utils import *
+from ..layers import RandomOrLearnedSinusoidalPosEmb, SinusoidalPosEmb
 
 
 def combine_interleaved(t, inner_dims=(1,), agg_type="average"):

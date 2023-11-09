@@ -1,25 +1,29 @@
 import random
+from typing import List
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import torch
 from omegaconf import DictConfig
 
-from pytorch3d.implicitron.dataset.dataset_base import FrameData
-from pytorch3d.implicitron.dataset.dataset_map_provider import DatasetMap
-from data_io.co3d.json_index_dataset_map_provider_v2 import JsonIndexDatasetMapProviderV2
-from pytorch3d.implicitron.tools.config import expand_args_fields
+from .implicitron.dataset.dataset_base import FrameData
+from .implicitron.dataset.dataset_map_provider import DatasetMap
+from .implicitron.dataset.json_index_dataset_map_provider_v2 import JsonIndexDatasetMapProviderV2
+#from .co3d.json_index_dataset_map_provider_v2 import JsonIndexDatasetMapProviderV2
+from .implicitron.tools.config import expand_args_fields
 from pytorch3d.utils import opencv_from_cameras_projection
-from geometry import get_opencv_pixel_coordinates
+from ..geometry import get_opencv_pixel_coordinates
 from einops import rearrange
-from torch import Tensor
 from torch.utils.data import Dataset
 from tqdm import tqdm
 import numpy as np
-import os 
+import os
+
+from .io_utils import pmgr
+
 
 def normalize_to_neg_one_to_one(img):
     return img * 2 - 1
+
 
 def get_dataset_map(
     dataset_root: str,
@@ -52,7 +56,7 @@ def get_dataset_map(
 
 
 class CO3DDataset(Dataset):
-    root: Path
+    root: str
     stage: str
     dataset: JsonIndexDatasetMapProviderV2
     image_size: int
@@ -81,7 +85,7 @@ class CO3DDataset(Dataset):
     ) -> None:
         super().__init__()
         self.stage = stage
-        self.root = Path(root) if root is not None else root 
+        self.root = root
         self.image_size = image_size
         self.num_context_views = num_context
         self.num_target_views = num_target
@@ -95,14 +99,15 @@ class CO3DDataset(Dataset):
         camera_quality_score_list = [] 
         for category_index, category in enumerate(categories):
             cache_path = f'dataset_cache_new/{category}_{stage}.pt'
-            dataset_map = torch.load(cache_path, map_location='cpu') 
+            with pmgr.open(cache_path, "rb") as f:
+                dataset_map = torch.load(f, map_location='cpu')
             datasets.append(dataset_map)
             sel_categories.append(category)
 
             # load the per-class camera quality score 
             if ISFILTER:
-                camera_quality_score = torch.load(f'dataset_cache_new/camera_quality_dict_{category}.pt', 
-                    map_location='cpu')
+                with pmgr.open(f'dataset_cache_new/camera_quality_dict_{category}.pt', "rb") as f:
+                    camera_quality_score = torch.load(f, map_location='cpu')
                 scores = torch.stack([v for v in camera_quality_score.values()])
                 score_threshold = torch.sort(scores, descending=True)[0][min(filter_num, scores.shape[0] - 1)]
                 per_category_camera_score_threshold.append(score_threshold)
@@ -136,7 +141,8 @@ class CO3DDataset(Dataset):
             x_resolution=self.image_size, y_resolution=self.image_size
         )
         self.normalize = normalize_to_neg_one_to_one
-        self.scene_scales = torch.load(f'./dataset_cache_new/scale_dict.pt', map_location='cpu')
+        with pmgr.open(f'./dataset_cache_new/scale_dict.pt', "rb") as f:
+            self.scene_scales = torch.load(f, map_location='cpu')
         self.mean_scale = mean_depth_scale
         self.scale_aug_ratio = scale_aug_ratio
         self.noise = noise 
@@ -181,7 +187,7 @@ class CO3DDataset(Dataset):
         rgb = frame_data.image_rgb
 
         return {
-            "key": Path(frame_data.image_path).stem,
+            "key": Path(os.path.basename(frame_data.image_path)).stem,
             "c2w": c2w,
             "k": k,
             "rgb": self.resize(rgb).clip(min=0, max=1),

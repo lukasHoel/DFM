@@ -1,18 +1,14 @@
-import sys
-import os
+
 import hydra
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-from utils import *
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from denoising_diffusion_pytorch.pixelnerf_trainer import (
+from ..denoising_diffusion_pytorch.pixelnerf_trainer import (
     PixelNeRFModelWrapper,
     Trainer,
 )
-import data_io
-from PixelNeRF import PixelNeRFModelVanilla
-import platform
+from ..data_io import get_dataset
+from ..PixelNeRF import PixelNeRFModelVanilla
 from accelerate import DistributedDataParallelKwargs
 from accelerate import Accelerator
 
@@ -28,7 +24,7 @@ def train(cfg: DictConfig):
     )
 
     train_batch_size = cfg.batch_size
-    dataset = data_io.get_dataset(cfg)
+    dataset = get_dataset(cfg)
     dl = DataLoader(
         dataset,
         batch_size=train_batch_size,

@@ -1,6 +1,6 @@
 """Multi-view geometry & proejction code.."""
 import torch
-from einops import rearrange, repeat
+from einops import repeat
 
 
 def symmetric_orthogonalization(x):

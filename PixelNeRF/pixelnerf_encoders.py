@@ -1,15 +1,6 @@
-import torch, torchvision
-from torch import nn
-import torch.nn.functional as F
-import sys
-import os
-import numpy as np
-from einops import rearrange, repeat
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from layers import *
-from utils import *
-from PixelNeRF.pixelnerf_helpers import *
+import torchvision
+from ..layers import *
+from .pixelnerf_helpers import *
 from functools import partial
 
 

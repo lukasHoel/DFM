@@ -3,14 +3,14 @@
 
 from typing import Callable, Optional, Tuple
 
-import torch
 from torch import nn
 from torch.nn import functional as F
 from torch import Tensor, device
 from typeguard import typechecked
 from torchtyping import TensorType
 from einops import rearrange
-from geometry import *
+from ..geometry import *
+
 
 def sample_points_along_rays(
     z_near: TensorType["camera_batch", torch.float32],

@@ -1,21 +1,14 @@
 # adapted from https://github.com/lucidrains/denoising-diffusion-pytorch
 
-import math
 from pathlib import Path
 from random import random
 from collections import OrderedDict
-import numpy as np
-from functools import partial
 from collections import namedtuple
 
-import torch
-from torch import nn
-import torch.nn.functional as F
-
-from torch.optim import Adam, AdamW
+from torch.optim import Adam
 from torchvision import utils
 
-from einops import rearrange, reduce, repeat
+from einops import repeat
 
 from tqdm.auto import tqdm
 from ema_pytorch import EMA
@@ -25,18 +18,13 @@ from torchvision.utils import make_grid
 
 from denoising_diffusion_pytorch.version import __version__
 import wandb
-import sys
-import os
 import imageio
 from accelerate import DistributedDataParallelKwargs
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# from utils import *
-from layers import *
-from losses import *
+from ..layers import *
+from ..losses import *
 import lpips
 
-from scipy import interpolate
 
 # constants
 ModelPrediction = namedtuple(

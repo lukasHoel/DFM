@@ -8,11 +8,9 @@ import torch.nn.functional as F
 from einops import rearrange, reduce
 from einops.layers.torch import Rearrange
 
-import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils import *
+from .utils import *
 
 
 class Residual(nn.Module):

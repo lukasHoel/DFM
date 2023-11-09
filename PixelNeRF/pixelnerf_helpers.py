@@ -1,14 +1,5 @@
-import torch
-from torch import nn
-import torch.nn.functional as F
-import sys
-import os
-from einops import rearrange, repeat
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from PixelNeRF.renderer import *
-from PixelNeRF.resnetfc import *
-import numpy as np
+from .renderer import *
 from PixelNeRF.resnetfc_time_embed import *
 
 

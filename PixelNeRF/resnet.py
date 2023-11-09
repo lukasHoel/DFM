@@ -1,11 +1,7 @@
-import torch
-import torch.nn as nn
-
-# from .utils import load_state_dict_from_url
 import torch.nn.functional as F
-from utils import *
-from layers import RandomOrLearnedSinusoidalPosEmb, SinusoidalPosEmb
-from einops import rearrange, reduce
+from ..utils import *
+from ..layers import RandomOrLearnedSinusoidalPosEmb, SinusoidalPosEmb
+from einops import rearrange
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
