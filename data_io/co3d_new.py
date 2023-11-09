@@ -463,16 +463,6 @@ def compute_scene_scale(categories, dataset_root):
             
             return torch.mean(torch.stack(scales)).item(), sequence
 
-    train_dataset = CO3DDepth(
-        root=dataset_root,
-        num_context=1,
-        num_target=1,
-        stage='train',
-        image_size=128,
-        categories=categories
-    ) 
-    dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=1, num_workers=8, shuffle=False, collate_fn=lambda x: x[0])
-
     if os.path.exists('dataset_cache_new/scale_dict.pt'):
         scale_dict = torch.load('dataset_cache_new/scale_dict.pt')
         skip_sequences = list(scale_dict.keys())
@@ -480,6 +470,18 @@ def compute_scene_scale(categories, dataset_root):
     else:
         scale_dict = {}
         skip_sequences = []
+
+    train_dataset = CO3DDepth(
+        root=dataset_root,
+        num_context=1,
+        num_target=1,
+        stage='train',
+        image_size=128,
+        categories=categories,
+        skip_sequences=skip_sequences
+    ) 
+    dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=1, num_workers=8, shuffle=False, collate_fn=lambda x: x[0])
+
     for i, data in tqdm(enumerate(dataloader), total=len(train_dataset)):
         scale, sequence_name = data
         scale_dict[sequence_name] = scale
