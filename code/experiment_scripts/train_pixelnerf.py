@@ -12,10 +12,18 @@ from ..PixelNeRF import PixelNeRFModelVanilla
 from accelerate import DistributedDataParallelKwargs
 from accelerate import Accelerator
 
+from ..data_io.io_utils import pmgr
+
 @hydra.main(
     version_base=None, config_path="../configurations/", config_name="config",
 )
 def train(cfg: DictConfig):
+    # download all necessary models
+    if cfg.checkpoint_path is not None:
+        cfg.checkpoint_path = pmgr.get_local_path(cfg.checkpoint_path)
+    if cfg.lpips_model_path is not None:
+        cfg.lpips_model_path = pmgr.get_local_path(cfg.lpips_model_path)
+
     # dataset
     # initialize the accelerator at the beginning
     ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)

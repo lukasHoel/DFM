@@ -1,5 +1,4 @@
 defaults:
-  - wandb: local
   - dataset: celeba
 max_scenes: null
 use_first_pool: false
@@ -57,3 +56,4 @@ load_pn: False
 co3d_root: "/home/hoellein/datasets/co3d"
 co3d_cache_root: "dataset_cache_new"
 lpips_model_path: null
+output_dir: "outputs"

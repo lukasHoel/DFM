@@ -8,6 +8,7 @@ from ..denoising_diffusion_pytorch.denoising_diffusion_pytorch import (
     Trainer,
 )
 from ..data_io import get_dataset
+from ..data_io.io_utils import pmgr
 
 from ..PixelNeRF import PixelNeRFModelCond
 import numpy as np
@@ -19,6 +20,12 @@ from accelerate import Accelerator
     version_base=None, config_path="../configurations/", config_name="config",
 )
 def train(cfg: DictConfig):
+    # download all necessary models
+    if cfg.checkpoint_path is not None:
+        cfg.checkpoint_path = pmgr.get_local_path(cfg.checkpoint_path)
+    if cfg.lpips_model_path is not None:
+        cfg.lpips_model_path = pmgr.get_local_path(cfg.lpips_model_path)
+
     train_settings = get_train_settings(cfg.setting_name, cfg.ngpus)
     cfg.num_context = train_settings["num_context"]
     cfg.num_target = train_settings["num_target"]

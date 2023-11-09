@@ -17,7 +17,6 @@ from accelerate import Accelerator
 from torchvision.utils import make_grid
 
 from .version import __version__
-import wandb
 import imageio
 from accelerate import DistributedDataParallelKwargs
 
@@ -25,6 +24,9 @@ from ..layers import *
 from ..losses import *
 import lpips
 import os
+
+from PIL import Image
+from ..data_io.io_utils import pmgr
 
 
 # constants
@@ -988,25 +990,6 @@ class Trainer(object):
 
         self.step = 0
 
-        if checkpoint_path is None and cfg.resume_id is not None:
-            folders = [
-                os.path.join("wandb/", f, "files")
-                for f in sorted(os.listdir("wandb"))
-                if cfg.resume_id in f
-            ]
-            # find all *.pt files in all folders
-            ckpt_files = []
-            for folder in folders:
-                ckpt_files.extend(
-                    [
-                        os.path.join(folder, f)
-                        for f in os.listdir(folder)
-                        if f.endswith(".pt")
-                    ]
-                )
-            # find the latest checkpoint
-            checkpoint_path = sorted(ckpt_files)[-1]
-
         self.load_pn =load_pn
 
         if checkpoint_path is not None and self.accelerator.is_main_process:
@@ -1029,28 +1012,11 @@ class Trainer(object):
         )
 
         if self.accelerator.is_main_process:
-            # run = wandb.init(config=cfg, **wandb_config)
-            if cfg.wandb_id is not None:
-                run = wandb.init(
-                    config=cfg, **wandb_config, id=cfg.wandb_id, resume="allow"
-                )
-            elif cfg.resume_id is not None:
-                run = wandb.init(
-                    config=cfg, **wandb_config, id=cfg.resume_id, resume="must"
-                )
-            else:
-                run = wandb.init(config=cfg, **wandb_config)
-            # print(f"starting run {cfg.wandb_id}")
-            wandb.run.log_code(".")
-            wandb.run.name = run_name
+            print(f"run dir: {cfg.output_dir}", flush=True)
 
-            print(f"run dir: {run.dir}", flush=True)
-
-            run_dir = run.dir
-            wandb.save(os.path.join(run_dir, "checkpoint*"))
-            wandb.save(os.path.join(run_dir, "video*"))
-            self.results_folder = Path(run_dir)
-            self.results_folder.mkdir(exist_ok=True)
+            run_dir = cfg.output_dir
+            pmgr.mkdirs(run_dir)
+            self.results_folder = run_dir
 
         # prepare model, dataloader, optimizer with accelerator
 
@@ -1068,23 +1034,15 @@ class Trainer(object):
             else None,
             "version": __version__,
         }
-        torch.save(data, str(self.results_folder / f"model-{milestone}.pt"))
-        wandb.save(
-            str(self.results_folder / f"model-{milestone}.pt"),
-            base_path=self.results_folder,
-        )
-        # delete prev checkpoint if exists
-        prev_milestone = milestone - 1
-        prev_path = self.results_folder / f"model-{prev_milestone}.pt"
-        if os.path.exists(prev_path):
-            # delete prev checkpoint
-            os.remove(prev_path)
+        with pmgr.open(os.path.join(self.results_folder, f"model-{milestone}.pt"), "wb") as f:
+            torch.save(data, f)
 
     def load(self, path):
         accelerator = self.accelerator
         device = accelerator.device
 
-        data = torch.load(str(path), map_location=torch.device("cpu"),)
+        with pmgr.open(str(path), "rb") as f:
+            data = torch.load(f, map_location=torch.device("cpu"),)
 
         # model = self.accelerator.unwrap_model(self.model)
         model = self.model
@@ -1114,7 +1072,8 @@ class Trainer(object):
         device = accelerator.device
 
         model = self.accelerator.unwrap_model(self.model)
-        data = torch.load(path, map_location=device)
+        with pmgr.open(path, "rb") as f:
+            data = torch.load(f, map_location=device)
 
         new_state_dict = OrderedDict()
         for key, value in data["model"].items():
@@ -1138,7 +1097,8 @@ class Trainer(object):
         device = accelerator.device
 
         model = self.accelerator.unwrap_model(self.model)
-        data = torch.load(path, map_location=device)
+        with pmgr.open(path, "rb") as f:
+            data = torch.load(f, map_location=device)
 
         from collections import OrderedDict
 
@@ -1249,22 +1209,22 @@ class Trainer(object):
 
                     self.accelerator.backward(loss)  # TODO check if this is correct
                     # print("loss backwarded")
-                if accelerator.is_main_process:
-                    wandb.log(
-                        {
-                            "loss": total_loss,
-                            "rgb_loss": total_rgb_loss,
-                            "rgb_cond_loss": total_rgb_cond_loss,
-                            "dist_loss": total_dist_loss,
-                            "depth_smooth_loss": total_depth_smooth_loss,
-                            "lpips_loss": total_lpips_loss,
-                            "rgb_intermediate_loss": total_rgb_intermediate_loss,
-                            "lr": self.lr_scheduler.get_last_lr()[0],
-                            "num_context": data["ctxt_rgb"].shape[1],
-                            "uncond": float(misc[-1]),
-                        },
-                        step=self.step,
-                    )
+                # if accelerator.is_main_process:
+                #     wandb.log(
+                #         {
+                #             "loss": total_loss,
+                #             "rgb_loss": total_rgb_loss,
+                #             "rgb_cond_loss": total_rgb_cond_loss,
+                #             "dist_loss": total_dist_loss,
+                #             "depth_smooth_loss": total_depth_smooth_loss,
+                #             "lpips_loss": total_lpips_loss,
+                #             "rgb_intermediate_loss": total_rgb_intermediate_loss,
+                #             "lr": self.lr_scheduler.get_last_lr()[0],
+                #             "num_context": data["ctxt_rgb"].shape[1],
+                #             "uncond": float(misc[-1]),
+                #         },
+                #         step=self.step,
+                #     )
                 accelerator.clip_grad_norm_(self.model.parameters(), 1.0)
                 pbar.set_description(f"loss: {total_loss:.4f}")
 
@@ -1307,17 +1267,18 @@ class Trainer(object):
                         all_images = torch.cat(all_images_list, dim=0)
                         all_rgb = None if all_rgb is None else torch.cat(all_rgb, dim=0)
                         if accelerator.is_main_process:
-                            utils.save_image(
-                                all_images,
-                                str(self.results_folder / f"sample-{milestone}.png"),
-                                nrow=int(math.sqrt(self.num_samples)),
-                            )
+                            with pmgr.open(os.path.join(self.results_folder, f"sample-{milestone}.png"), "wb") as f:
+                                utils.save_image(
+                                    all_images,
+                                    f,
+                                    nrow=int(math.sqrt(self.num_samples)),
+                                )
 
                     if (
                         self.step % self.wandb_every == 0
                         and accelerator.is_main_process
                     ):
-                        self.wandb_summary(all_images, all_videos_list, all_rgb, misc)
+                        self.wandb_summary(all_images, all_videos_list, all_rgb, misc, output_dir=self.results_folder)
 
                         if self.step != 0 and self.step % self.save_every == 0:
                             milestone = self.step // self.save_every
@@ -1335,8 +1296,8 @@ class Trainer(object):
 
         accelerator.print("training complete")
 
-    def wandb_summary(self, all_images, sampled_videos, all_rgb, misc):
-        print("wandb summary")
+    def wandb_summary(self, all_images, sampled_videos, all_rgb, misc, output_dir):
+        print("log summary")
         (
             input,
             t_gt,
@@ -1359,33 +1320,7 @@ class Trainer(object):
             render_cond,
         ) = misc
         # gt = gt[:10]
-        log_dict = {
-            "sanity/denoised_min": output.min(),
-            "sanity/denoised_max": output.max(),
-            "sanity/noisy_input_min": input.min(),
-            "sanity/noisy_input_max": input.max(),
-            "sanity/ctxt_rgb_min": ctxt_rgb.min(),
-            "sanity/ctxt_rgb_max": ctxt_rgb.max(),
-            "sanity/depth_min": depth.min(),
-            "sanity/depth_max": depth.max(),
-            "sanity/render_cond": render_cond,
-        }
-        if rendered_trgt_depth is not None:
-            log_dict.update(
-                {
-                    "sanity/rendered_trgt_depth_min": rendered_trgt_depth.min(),
-                    "sanity/rendered_trgt_depth_max": rendered_trgt_depth.max(),
-                    "sanity/rendered_trgt_img_min": rendered_trgt_img.min(),
-                    "sanity/rendered_trgt_img_max": rendered_trgt_img.max(),
-                }
-            )
-        if rendered_trgt_feats.numel() > 0:
-            log_dict.update(
-                {
-                    "sanity/rendered_trgt_feats_min": rendered_trgt_feats.min(),
-                    "sanity/rendered_trgt_feats_max": rendered_trgt_feats.max(),
-                }
-            )
+
         t_gt = rearrange(t_gt, "b t c h w -> (b t) c h w")
         ctxt_rgb = rearrange(ctxt_rgb, "b t c h w -> (b t) c h w")
         b, c, h, w = t_gt.shape
@@ -1393,14 +1328,14 @@ class Trainer(object):
             jet_depth(depth[:].cpu().detach().view(-1, h, w))
         ).permute(0, 3, 1, 2)
         depths = make_grid(depth)
-        depths = wandb.Image(depths.permute(1, 2, 0).numpy())
+        depths = depths.permute(1, 2, 0).numpy()
 
         def prepare_depths(depth):
             depth = torch.from_numpy(
                 jet_depth(depth[:].cpu().detach().view(-1, h, w))
             ).permute(0, 3, 1, 2)
             depths = make_grid(depth)
-            depths = wandb.Image(depths.permute(1, 2, 0).numpy())
+            depths = depths.permute(1, 2, 0).numpy()
             return depths
 
         # clamp input, output, target to [0, 1]
@@ -1411,44 +1346,43 @@ class Trainer(object):
 
         # rendered_ctxt_depths = prepare_depths(rendered_ctxt_depth)
         image_dict = {
-            "visualization/depth": depths,
-            "visualization/noisy_input": wandb.Image(
-                make_grid(input[:].cpu().detach()).permute(1, 2, 0).numpy()
-            ),
-            "result/output": wandb.Image(
+            "visualization_depth.png": depths,
+            "visualization_noisy_input.png":
+                make_grid(input[:].cpu().detach()).permute(1, 2, 0).numpy(),
+            "result_output.png":
                 make_grid(output[:].cpu().detach()).permute(1, 2, 0).numpy()
-            ),
-            "result/target": wandb.Image(
+            ,
+            "result_target.png":
                 make_grid(t_gt[:].cpu().detach()).permute(1, 2, 0).numpy()
-            ),
-            "result/ctxt_rgb": wandb.Image(
+            ,
+            "result_ctxt_rgb.png":
                 make_grid(ctxt_rgb[:].cpu().detach()).permute(1, 2, 0).numpy()
-            ),
-            "visualization/target_patch": wandb.Image(
+            ,
+            "visualization_target_patch.png":
                 make_grid(target_patch[:].cpu().detach()).permute(1, 2, 0).numpy()
-            ),
-            "result/target_out": wandb.Image(
+            ,
+            "result_target_out.png":
                 make_grid(target_out[:].cpu().detach()).permute(1, 2, 0).numpy()
-            ),
+            ,
         }
         if rgb_intermediate is not None:
             image_dict.update(
                 {
-                    "visualization/rgb_intermediate": wandb.Image(
+                    "visualization_rgb_intermediate.png":
                         make_grid(rgb_intermediate[:].cpu().detach())
                         .permute(1, 2, 0)
                         .numpy()
-                    )
+
                 }
             )
         if x_self_cond is not None:
             image_dict.update(
                 {
-                    "result/x_self_cond": wandb.Image(
+                    "result_x_self_cond.png":
                         make_grid(x_self_cond[:].cpu().detach())
                         .permute(1, 2, 0)
                         .numpy()
-                    )
+
                 }
             )
 
@@ -1456,8 +1390,8 @@ class Trainer(object):
             masks = rearrange(masks, "b t c h w -> (b t) c h w").cpu().detach()
             masks = repeat(masks, "b c h w -> b (n c) h w", n=3)
             masks = make_grid(masks)
-            masks = wandb.Image(masks.permute(1, 2, 0).numpy())
-            image_dict.update({"visualization/masks": masks})
+            masks = masks.permute(1, 2, 0).numpy()
+            image_dict.update({"visualization_masks.png": masks})
 
         if rendered_trgt_depth is not None:
             rendered_trgt_depths = prepare_depths(rendered_trgt_depth)
@@ -1469,7 +1403,7 @@ class Trainer(object):
                     #     .permute(1, 2, 0)
                     #     .numpy()
                     # ),
-                    "visualization/rendered_trgt_depth": rendered_trgt_depths,
+                    "visualization_rendered_trgt_depth.png": rendered_trgt_depths,
                 }
             )
         # check if rendered_trgt_feats has 0 size
@@ -1478,92 +1412,36 @@ class Trainer(object):
         if rendered_trgt_feats.numel() > 0:
             image_dict.update(
                 {
-                    "visualization/rendered_trgt_feats": wandb.Image(
+                    "visualization_rendered_trgt_feats.png":
                         make_grid(rendered_trgt_feats[:10][:, 3:6, ...].cpu().detach())
                         .permute(1, 2, 0)
                         .numpy()
-                    ),
+                    ,
                 }
             )
 
         if rendered_trgt_img is not None:
             image_dict.update(
                 {
-                    "visualization/rendered_trgt_img": wandb.Image(
+                    "visualization_rendered_trgt_img.png":
                         make_grid(rendered_trgt_img[:10].cpu().detach())
                         .permute(1, 2, 0)
                         .numpy()
-                    ),
+                    ,
                 }
             )
 
         if all_images is not None:
-            log_dict.update(
-                {
-                    "sanity/sample_min": all_images.min(),
-                    "sanity/sample_max": all_images.max(),
-                }
-            )
             images = make_grid(all_images.cpu().detach())
-            images = wandb.Image(images.permute(1, 2, 0).numpy())
-            image_dict.update({"visualization/samples": images})
+            images = images.permute(1, 2, 0).numpy()
+            image_dict.update({"visualization_samples.png": images})
             if all_rgb is not None:
                 rgb = make_grid(all_rgb.cpu().detach())
-                rgb = wandb.Image(rgb.permute(1, 2, 0).numpy())
-                image_dict.update({"visualization/rgb": rgb})
+                rgb = rgb.permute(1, 2, 0).numpy()
+                image_dict.update({"visualization_rgb.png": rgb})
 
-        wandb.log(log_dict)
-        wandb.log(image_dict)
+        for image_key, image in image_dict.items():
+            with pmgr.open(os.path.join(output_dir, image_key), "wb") as f:
+                Image.fromarray(image).save(f)
 
-        run_dir = wandb.run.dir
-        for f in range(len(frames)):
-            frames[f] = rearrange(frames[f], "b h w c -> h (b w) c")
-        denoised_f = os.path.join(run_dir, "denoised_view_circle.mp4")
-        imageio.mimwrite(denoised_f, frames, fps=8, quality=7)
-
-        if sampled_videos is not None:
-            for f in range(len(sampled_videos[0])):
-                sampled_videos[0][f] = rearrange(
-                    sampled_videos[0][f], "b h w c -> h (b w) c"
-                )
-            sampled_f = os.path.join(run_dir, "sampled_view_circle.mp4")
-            imageio.mimwrite(sampled_f, sampled_videos[0], fps=8, quality=7)
-            wandb.log(
-                {
-                    "vid/sampled_view_circle": wandb.Video(
-                        sampled_f, format="mp4", fps=8
-                    ),
-                }
-            )
-        wandb.log(
-            {"vid/denoised_view_circle": wandb.Video(denoised_f, format="mp4", fps=8),}
-        )
-
-        for f in range(len(depth_frames)):
-            depth_frames[f] = rearrange(depth_frames[f], "(n b) h w -> n h (b w)", n=1)
-
-        depth = torch.cat(depth_frames, dim=0)
-        depth = (
-            torch.from_numpy(
-                jet_depth(
-                    depth[:].cpu().detach().view(depth.shape[0], self.image_size, -1)
-                )
-            )
-            * 255
-        )
-        # convert depth to list of images
-        depth_frames = []
-        for i in range(depth.shape[0]):
-            depth_frames.append(depth[i].cpu().detach().numpy().astype(np.uint8))
-
-        denoised_f_depth = os.path.join(run_dir, "denoised_view_circle_depth.mp4")
-        imageio.mimwrite(denoised_f_depth, depth_frames, fps=8, quality=7)
-        wandb.log(
-            {
-                "vid/denoised_view_circle_depth": wandb.Video(
-                    denoised_f_depth, format="mp4", fps=8
-                ),
-            }
-        )
-
-        print(f"end wandb summary sample")
+        print(f"end log summary sample")
