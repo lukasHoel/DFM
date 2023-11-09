@@ -391,7 +391,7 @@ def init_info_file(categories, dataset_root):
 def compute_scene_scale(categories, dataset_root):
 
     class CO3DDepth(Dataset):
-        def __init__(self, root: str, num_context: int, num_target: int, categories: List[str] = ['hydrant'], image_size: int = 64, stage: str = "train") -> None:
+        def __init__(self, root: str, num_context: int, num_target: int, categories: List[str] = ['hydrant'], image_size: int = 64, stage: str = "train", skip_sequences: List[str] = None) -> None:
             super().__init__()
             self.stage = stage
             self.root = Path(root)
@@ -414,6 +414,7 @@ def compute_scene_scale(categories, dataset_root):
             for dataset_class, dataset in enumerate(self.datasets):
                 all_sequence = sorted(list(dataset.sequence_names()))
                 all_sequence = [s for s in all_sequence if os.path.exists(os.path.join(dataset_root, sel_categories[dataset_class], s))]
+                all_sequence = [s for s in all_sequence if s not in skip_sequences]
                 self.all_sequences.extend(all_sequence)
                 self.index_to_class.append(np.ones(len(all_sequence)) * dataset_class)
 
@@ -470,7 +471,12 @@ def compute_scene_scale(categories, dataset_root):
     ) 
     dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=1, num_workers=8, shuffle=False, collate_fn=lambda x: x[0])
 
-    scale_dict = {} 
+    if os.path.exists('dataset_cache_new/scale_dict.pt'):
+        scale_dict = torch.load('dataset_cache_new/scale_dict.pt')
+        skip_sequences = list(scale_dict.keys())
+    else:
+        scale_dict = {}
+        skip_sequences = []
     for i, data in tqdm(enumerate(dataloader), total=len(train_dataset)):
         scale, sequence_name = data
         scale_dict[sequence_name] = scale
@@ -481,7 +487,8 @@ def compute_scene_scale(categories, dataset_root):
         num_target=1,
         stage='val',
         image_size=128,
-        categories=categories
+        categories=categories,
+        skip_sequences=skip_sequences
     ) 
     dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=8, shuffle=False, collate_fn=lambda x: x[0])
 
