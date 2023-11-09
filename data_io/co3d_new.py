@@ -91,19 +91,21 @@ class CO3DDataset(Dataset):
         ISFILTER = stage == 'train' and filter_num > 0
 
         datasets = [] 
+        sel_categories = []
         per_category_camera_score_threshold = []
         camera_quality_score_list = [] 
         for category_index, category in enumerate(categories):
             cache_path = f'dataset_cache_new/{category}_{stage}.pt'
             dataset_map = torch.load(cache_path, map_location='cpu') 
             datasets.append(dataset_map)
+            sel_categories.append(category)
 
             # load the per-class camera quality score 
             if ISFILTER:
                 camera_quality_score = torch.load(f'dataset_cache_new/camera_quality_dict_{category}.pt', 
                     map_location='cpu')
                 scores = torch.stack([v for v in camera_quality_score.values()])
-                score_threshold = torch.sort(scores, descending=True)[0][filter_num]
+                score_threshold = torch.sort(scores, descending=True)[0][min(filter_num, scores.shape[0] - 1)]
                 per_category_camera_score_threshold.append(score_threshold)
                 camera_quality_score_list.append(camera_quality_score)
 
@@ -113,6 +115,7 @@ class CO3DDataset(Dataset):
         self.index_to_class = [] 
         for dataset_class, dataset in enumerate(self.datasets):
             all_sequence = sorted(list(dataset.sequence_names()))
+            all_sequence = [s for s in all_sequence if os.path.exists(os.path.join(root, sel_categories[dataset_class], s))]
 
             if ISFILTER: 
                 filtered_sequence = [] 
@@ -397,11 +400,13 @@ def compute_scene_scale(categories, dataset_root):
             self.num_context_views = num_context
             self.num_target_views = num_target
 
-            datasets = [] 
+            datasets = []
+            sel_categories = []
             for category_index, category in enumerate(categories):
                 cache_path = f'dataset_cache_new/{category}_{stage}.pt'
                 dataset_map = torch.load(cache_path, map_location='cpu')
                 datasets.append(dataset_map)
+                sel_categories.append(category)
 
             self.datasets = datasets 
 
@@ -409,6 +414,7 @@ def compute_scene_scale(categories, dataset_root):
             self.index_to_class = [] 
             for dataset_class, dataset in enumerate(self.datasets):
                 all_sequence = sorted(list(dataset.sequence_names()))
+                all_sequence = [s for s in all_sequence if os.path.exists(os.path.join(dataset_root, sel_categories[dataset_class], s))]
                 self.all_sequences.extend(all_sequence)
                 self.index_to_class.append(np.ones(len(all_sequence)) * dataset_class)
 
@@ -499,18 +505,22 @@ def compute_camera_quality_score(categories, dataset_root):
             self.num_context_views = num_context
             self.num_target_views = num_target
 
-            datasets = [] 
+            datasets = []
+            sel_categories = []
             for category_index, category in enumerate(categories):
                 cache_path = f'dataset_cache_new/{category}_{stage}.pt'
                 dataset_map = torch.load(cache_path, map_location='cpu')   
                 datasets.append(dataset_map)
+                sel_categories.append(category)
 
-            self.datasets = datasets 
+            self.datasets = datasets
 
             self.all_sequences = [] 
             self.index_to_class = [] 
             for dataset_class, dataset in enumerate(self.datasets):
                 all_sequence = sorted(list(dataset.sequence_names()))
+                all_sequence = [s for s in all_sequence if os.path.exists(os.path.join(dataset_root, sel_categories[dataset_class], s))]
+                print("category", categories[dataset_class], "n_seq", len(all_sequence))
                 self.all_sequences.extend(all_sequence)
                 self.index_to_class.append(np.ones(len(all_sequence)) * dataset_class)
 
