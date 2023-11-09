@@ -18,13 +18,13 @@ import numpy as np
 from iopath.common.file_io import PathManager
 
 from omegaconf import DictConfig
-from pytorch3d.implicitron.dataset.dataset_map_provider import (
+from ..dataset.dataset_map_provider import (
     DatasetMap,
     DatasetMapProviderBase,
     PathManagerFactory,
 )
-from .json_index_dataset import JsonIndexDataset
-from pytorch3d.implicitron.tools.config import (
+from ..dataset.json_index_dataset import JsonIndexDataset
+from ..tools.config import (
     expand_args_fields,
     registry,
     run_auto_creation,
@@ -275,7 +275,9 @@ class JsonIndexDatasetMapProviderV2(DatasetMapProviderBase):  # pyre-ignore [13]
         if self.load_eval_batches:
             eval_batch_index = self._load_annotation_json(
                 os.path.join(
-                    category, "eval_batches", f"eval_batches_{self.subset_name}.json",
+                    category,
+                    "eval_batches",
+                    f"eval_batches_{self.subset_name}.json",
                 )
             )
         else:
@@ -305,7 +307,8 @@ class JsonIndexDatasetMapProviderV2(DatasetMapProviderBase):  # pyre-ignore [13]
                     eval_batch_index,
                     subset_mapping["test"],
                 ) = self._extend_test_data_with_known_views(
-                    subset_mapping, eval_batch_index,
+                    subset_mapping,
+                    eval_batch_index,
                 )
 
             test_dataset = dataset.subset_from_frame_index(subset_mapping["test"])
@@ -314,8 +317,10 @@ class JsonIndexDatasetMapProviderV2(DatasetMapProviderBase):  # pyre-ignore [13]
                 # load the eval batches
                 logger.debug("Extracting eval batches.")
                 try:
-                    test_dataset.eval_batches = test_dataset.seq_frame_index_to_dataset_index(
-                        eval_batch_index,
+                    test_dataset.eval_batches = (
+                        test_dataset.seq_frame_index_to_dataset_index(
+                            eval_batch_index,
+                        )
                     )
                 except IndexError:
                     warnings.warn(
@@ -325,10 +330,12 @@ class JsonIndexDatasetMapProviderV2(DatasetMapProviderBase):  # pyre-ignore [13]
                         + "evaluation results calculated on the original dataset.\n"
                         + "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
                     )
-                    test_dataset.eval_batches = test_dataset.seq_frame_index_to_dataset_index(
-                        eval_batch_index,
-                        allow_missing_indices=True,
-                        remove_missing_indices=True,
+                    test_dataset.eval_batches = (
+                        test_dataset.seq_frame_index_to_dataset_index(
+                            eval_batch_index,
+                            allow_missing_indices=True,
+                            remove_missing_indices=True,
+                        )
                     )
                 logger.info(f"# eval batches: {len(test_dataset.eval_batches)}")
 
@@ -379,7 +386,10 @@ class JsonIndexDatasetMapProviderV2(DatasetMapProviderBase):  # pyre-ignore [13]
         return train_dataset.get_all_train_cameras()
 
     def _load_annotation_json(self, json_filename: str):
-        full_path = os.path.join(self.dataset_root, json_filename,)
+        full_path = os.path.join(
+            self.dataset_root,
+            json_filename,
+        )
         logger.info(f"Loading frame index json from {full_path}.")
         path_manager = self.path_manager_factory.get()
         if path_manager is not None:
@@ -397,7 +407,9 @@ class JsonIndexDatasetMapProviderV2(DatasetMapProviderBase):  # pyre-ignore [13]
 
     def _get_available_subset_names(self, category: str):
         return get_available_subset_names(
-            self.dataset_root, category, path_manager=self.path_manager_factory.get(),
+            self.dataset_root,
+            category,
+            path_manager=self.path_manager_factory.get(),
         )
 
     def _extend_test_data_with_known_views(
@@ -436,7 +448,9 @@ class JsonIndexDatasetMapProviderV2(DatasetMapProviderBase):  # pyre-ignore [13]
 
 
 def get_available_subset_names(
-    dataset_root: str, category: str, path_manager: Optional[PathManager] = None,
+    dataset_root: str,
+    category: str,
+    path_manager: Optional[PathManager] = None,
 ) -> List[str]:
     """
     Get the available subset names for a given category folder inside a root dataset
