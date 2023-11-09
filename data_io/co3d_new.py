@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import torch
-from jaxtyping import Float
 from omegaconf import DictConfig
 
 from pytorch3d.implicitron.dataset.dataset_base import FrameData
@@ -145,7 +144,7 @@ class CO3DDataset(Dataset):
     def __len__(self) -> int:
         return len(self.all_sequences)
 
-    def resize(self, image: Float[Tensor, "C H W"]) -> Float[Tensor, "C RH RW"]:
+    def resize(self, image):
 
         image_npy = image
         return torch.nn.functional.interpolate(
