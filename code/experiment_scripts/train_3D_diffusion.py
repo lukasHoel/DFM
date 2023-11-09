@@ -131,6 +131,23 @@ def get_train_settings(name, ngpus):
             "cnn_refine": False,
             "lindisp": False
         }
+    elif name == "co3d_3ctxt_paper":
+        return {
+            "n_coarse": 64,
+            "n_fine": 64,
+            "n_coarse_coarse": 64,
+            "n_coarse_fine": 0,
+            "num_pixels": int(24 ** 2),
+            "batch_size": 3 * ngpus,
+            "num_context": 3,
+            "num_target": 2,
+            "n_feats_out": 64,
+            "use_viewdir": False,
+            "sampling": "patch",
+            "self_condition": False,
+            "cnn_refine": False,
+            "lindisp": False
+        }
     elif name == "re":
         return {
             "n_coarse": 64,
