@@ -1,9 +1,6 @@
-from torch import nn
-import torch
-
 #  import torch_scatter
 import torch.autograd.profiler as profiler
-from einops import rearrange, repeat
+from einops import rearrange
 
 from ..utils import *
 from ..layers import RandomOrLearnedSinusoidalPosEmb, SinusoidalPosEmb
@@ -26,7 +23,7 @@ def combine_interleaved(t, inner_dims=(1,), agg_type="average"):
 class ResnetBlockFCTimeEmbed(nn.Module):
     """
     Fully connected ResNet Block class.
-    Taken from DVR code.
+    Taken from DVR ..
     :param size_in (int): input dimension
     :param size_out (int): output dimension
     :param size_h (int): hidden dimension

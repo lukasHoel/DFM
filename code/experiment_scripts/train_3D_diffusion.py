@@ -1,5 +1,4 @@
 # adapted from https://github.com/lucidrains/denoising-diffusion-pytorch
-import os
 import hydra
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader

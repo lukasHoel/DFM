@@ -1,6 +1,5 @@
 import torch
 from scipy.spatial.transform import Rotation as R
-from torch import Tensor
 
 
 @torch.no_grad()

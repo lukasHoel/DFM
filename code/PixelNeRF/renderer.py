@@ -1,4 +1,4 @@
-"""Volume rendering code."""
+"""Volume rendering .."""
 # parts are adapted from https://github.com/kwea123/nerf_pl/blob/master/models/rendering.py
 
 from typing import Callable, Optional, Tuple

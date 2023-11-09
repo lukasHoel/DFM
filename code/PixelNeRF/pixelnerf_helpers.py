@@ -1,6 +1,5 @@
 
 from .renderer import *
-from PixelNeRF.resnetfc_time_embed import *
 
 
 def pixel_aligned_features_cond(

@@ -12,7 +12,7 @@ from ema_pytorch import EMA
 from accelerate import Accelerator
 from torchvision.utils import make_grid
 
-from denoising_diffusion_pytorch.version import __version__
+from ..denoising_diffusion_pytorch.version import __version__
 
 import wandb
 import imageio

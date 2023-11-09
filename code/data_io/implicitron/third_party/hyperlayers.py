@@ -5,7 +5,6 @@
 '''
 import functools
 
-import torch
 import torch.nn as nn
 
 from . import pytorch_prototyping
