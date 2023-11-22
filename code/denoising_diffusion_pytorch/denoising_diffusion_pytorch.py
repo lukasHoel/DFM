@@ -1048,7 +1048,8 @@ class Trainer(object):
         model = self.model
         # print(f"model parameter names: {list(model.state_dict().keys())}")
         # load all parameteres
-        model.load_state_dict(data["model"], strict=True)
+        data["model"].pop("model.enc.pos_embed")
+        print(model.load_state_dict(data["model"], strict=False))
 
         try:
             self.step = data["step"]
@@ -1057,7 +1058,9 @@ class Trainer(object):
             print("step optimizer not found")
 
         if self.accelerator.is_main_process:
-            self.ema.load_state_dict(data["ema"], strict=True)
+            data["ema"].pop("ema_model.model.enc.pos_embed")
+            data["ema"].pop("online_model.model.enc.pos_embed")
+            print(self.ema.load_state_dict(data["ema"], strict=False))
 
         if "version" in data:
             print(f"loading from version {data['version']}")
@@ -1076,21 +1079,74 @@ class Trainer(object):
             data = torch.load(f, map_location=device)
 
         new_state_dict = OrderedDict()
-        for key, value in data["model"].items():
+        all_keys = list(data["model"].keys())
+        
+        #for key, value in data["model"].items():
+        for key in all_keys:
+            value = data["model"][key]
             if "pixel" in key:
                 new_state_dict[key.replace("pixelNeRF", "pixelNeRF_joint")] = value
                 new_state_dict[key.replace("pixelNeRF", "pixelNeRF_joint_coarse")] = value
-                new_state_dict[key] = value
-            elif "enc" in key:
-                if "enc.model.conv1" not in key:
-                    new_state_dict[key.replace("enc", "noisy_trgt_enc")] = value
-                new_state_dict[key] = value
             elif key in model.state_dict().keys():
                 new_state_dict[key] = value
             else:
                 print(f"key {key} not in model state dict")
-        # exit()
-        model.load_state_dict(new_state_dict, strict=True)
+
+        # zero pad a few layers to adapt for feature conditioning
+        old_feat_dim = new_state_dict['model.pixelNeRF_joint.mlp.lin_out_feats.weight'].shape[0]
+        new_feat_dim = model.model.pixelNeRF_joint.mlp.lin_out_feats.weight.shape[0]
+        in_dim = model.model.pixelNeRF_joint.mlp.lin_out_feats.weight.shape[1]
+        new_state_dict['model.pixelNeRF_joint.mlp.lin_out_feats.weight'] = torch.cat(
+            [
+                new_state_dict['model.pixelNeRF_joint.mlp.lin_out_feats.weight'],
+                torch.zeros((new_feat_dim - old_feat_dim, in_dim), device=device)
+            ], dim=0
+        )
+        new_state_dict['model.pixelNeRF_joint.mlp.lin_out_feats.bias'] = torch.cat(
+            [
+                new_state_dict['model.pixelNeRF_joint.mlp.lin_out_feats.bias'],
+                torch.zeros((new_feat_dim - old_feat_dim), device=device)
+            ], dim=0
+        )
+        new_state_dict['model.pixelNeRF_joint.mlp_fine.lin_out_feats.weight'] = torch.cat(
+            [
+                new_state_dict['model.pixelNeRF_joint.mlp_fine.lin_out_feats.weight'],
+                torch.zeros((new_feat_dim - old_feat_dim, in_dim), device=device)
+            ], dim=0
+        )
+        new_state_dict['model.pixelNeRF_joint.mlp_fine.lin_out_feats.bias'] = torch.cat(
+            [
+                new_state_dict['model.pixelNeRF_joint.mlp_fine.lin_out_feats.bias'],
+                torch.zeros((new_feat_dim - old_feat_dim), device=device)
+            ], dim=0
+        )
+        new_state_dict['model.pixelNeRF_joint_coarse.mlp.lin_out_feats.weight'] = torch.cat(
+            [
+                new_state_dict['model.pixelNeRF_joint_coarse.mlp.lin_out_feats.weight'],
+                torch.zeros((new_feat_dim - old_feat_dim, in_dim), device=device)
+            ], dim=0
+        )
+        new_state_dict['model.pixelNeRF_joint_coarse.mlp.lin_out_feats.bias'] = torch.cat(
+            [
+                new_state_dict['model.pixelNeRF_joint_coarse.mlp.lin_out_feats.bias'],
+                torch.zeros((new_feat_dim - old_feat_dim), device=device)
+            ], dim=0
+        )
+        new_state_dict['model.pixelNeRF_joint_coarse.mlp_fine.lin_out_feats.weight'] = torch.cat(
+            [
+                new_state_dict['model.pixelNeRF_joint_coarse.mlp_fine.lin_out_feats.weight'],
+                torch.zeros((new_feat_dim - old_feat_dim, in_dim), device=device)
+            ], dim=0
+        )
+        new_state_dict['model.pixelNeRF_joint_coarse.mlp_fine.lin_out_feats.bias'] = torch.cat(
+            [
+                new_state_dict['model.pixelNeRF_joint_coarse.mlp_fine.lin_out_feats.bias'],
+                torch.zeros((new_feat_dim - old_feat_dim), device=device)
+            ], dim=0
+        )
+        new_state_dict.pop("model.enc.pos_embed")
+
+        print(model.load_state_dict(new_state_dict, strict=False))
 
     def load_from_external_checkpoint(self, path):
         accelerator = self.accelerator
